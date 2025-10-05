@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export default function WhiteBoardToolBar({tool,setTool,color,setColor}:any) {
+export default function WhiteBoardToolBar({tool,setTool,color,setColor,onClearCanvasClick,onUndoClick,onRedoClick}:any) {
 
   const ToolType={
     PENCIL:'pencil',
@@ -30,11 +30,11 @@ export default function WhiteBoardToolBar({tool,setTool,color,setColor}:any) {
             <input type="color"  value={color} onChange={(e)=>setColor(e.target.value)}  />
         </div>
         <div>
-            <button className="px-2 py-1 rounded-md border border-blue-400 mx-2 cursor-pointer">Undo</button>
-            <button className="px-2 py-1 rounded-md border border-blue-400 mx-2 cursor-pointer">Redo</button>
+            <button className="px-2 py-1 rounded-md border border-blue-400 mx-2 cursor-pointer" onClick={onUndoClick}>Undo</button>
+            <button className="px-2 py-1 rounded-md border border-blue-400 mx-2 cursor-pointer" onClick={onRedoClick}>Redo</button>
         </div>
         <div>
-            <button  className="px-2 py-1 rounded-md border border-blue-400 text-red-500 cursor-pointer">Clear Board</button>
+            <button  className="px-2 py-1 rounded-md border border-blue-400 text-red-500 cursor-pointer" onClick={onClearCanvasClick}>Clear Board</button>
         </div>
       </div>
     </>

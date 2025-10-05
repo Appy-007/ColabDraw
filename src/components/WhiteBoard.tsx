@@ -6,6 +6,9 @@ export type Point = [number, number];
 
 type WhiteBoardPropsType = {
   whiteBoardEvents: WhiteBoardEventType[];
+  setUndoWhiteBoardEvents:React.Dispatch<
+    React.SetStateAction<WhiteBoardEventType[]>
+  >;
   setWhiteBoardEvents: React.Dispatch<
     React.SetStateAction<WhiteBoardEventType[]>
   >;
@@ -17,6 +20,7 @@ type WhiteBoardPropsType = {
 
 export default function Whiteboard({
   whiteBoardEvents,
+  setUndoWhiteBoardEvents,
   setWhiteBoardEvents,
   canvasRef,
   canvasctxRef,
@@ -34,7 +38,7 @@ export default function Whiteboard({
       // Set the internal canvas width and height attributes
       canv.width = rect.width;
       canv.height = rect.height;
-      const ctx = canv.getContext("2d");
+      const ctx = canv?.getContext("2d");
       canvasctxRef.current = ctx;
     }
   }, [canvasRef, canvasctxRef]);
@@ -55,6 +59,7 @@ export default function Whiteboard({
           canvas.linearPath(boardEvent.path as Point[], {
             strokeWidth: 0.5,
             stroke: boardEvent.stroke,
+            roughness:0,
           });
         } else if (boardEvent.type === "line") {
           canvas.line(
@@ -62,7 +67,7 @@ export default function Whiteboard({
             boardEvent.offsetY,
             boardEvent.currentX!,
             boardEvent.currentY!,
-            { strokeWidth: 0.5, stroke: boardEvent.stroke }
+            { strokeWidth: 0.5, stroke: boardEvent.stroke,roughness:0 }
           );
         } else {
           canvas.rectangle(
@@ -70,7 +75,7 @@ export default function Whiteboard({
             boardEvent.offsetY,
             boardEvent.currentX!,
             boardEvent.currentY!,
-            { strokeWidth: 0.5, stroke: boardEvent.stroke }
+            { strokeWidth: 0.5, stroke: boardEvent.stroke,roughness:0 }
           );
         }
       });
@@ -186,6 +191,7 @@ export default function Whiteboard({
   const handleMouseUp = (e: React.MouseEvent) => {
     const { offsetX, offsetY } = e.nativeEvent;
     console.log("MOUSE UP", offsetX, offsetY);
+    setUndoWhiteBoardEvents([])
     setEnableDrawing(false);
   };
 
