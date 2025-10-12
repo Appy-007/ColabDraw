@@ -37,7 +37,7 @@ export default function Home() {
        
       </div>
 
-       {isModalOpen === MODAL_TYPE.createRoom && <CreateRoom isOpen={isModalOpen===MODAL_TYPE.createRoom} setShowModal={setIsModalOpen}/>}
+      {isModalOpen === MODAL_TYPE.createRoom && <CreateRoom isOpen={isModalOpen===MODAL_TYPE.createRoom} setShowModal={setIsModalOpen}/>}
 
       {isModalOpen === MODAL_TYPE.joinRoom && <JoinRoom isOpen={isModalOpen===MODAL_TYPE.joinRoom} setShowModal={setIsModalOpen}/>}
     </>

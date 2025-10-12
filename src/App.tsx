@@ -4,8 +4,14 @@ import { createBrowserRouter,RouterProvider } from 'react-router-dom'
 import Home from './pages/Home'
 import Room from './pages/Room'
 import Nav from './components/Nav'
+import Register from './pages/Register'
+import { ToastContainer } from 'react-toastify'
 
 const router=createBrowserRouter([
+  {
+    path:'/',
+    element:<Register/>
+  },
   {
     path:'/home',
     element:<Home/>
@@ -25,6 +31,7 @@ function App() {
     <>
       <Nav/>
       <RouterProvider router={router}/>
+      <ToastContainer position="top-center" autoClose={3000}/>
     </>
   )
 }
