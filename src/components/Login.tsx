@@ -46,7 +46,6 @@ export default function Login({ isOpen, setShowModal }: FormPropTypes) {
     <>
       <Modal isOpen={isOpen} onClose={() => setShowModal(-1)}>
         <div>
-          <h2 className="text-2xl font-bold mb-4 text-sky-400 ">Join Room</h2>
           <form
             ref={formRef}
             className="flex flex-col gap-4"
@@ -75,7 +74,7 @@ export default function Login({ isOpen, setShowModal }: FormPropTypes) {
             </div>
 
             <button className="cursor-pointer text-white bg-sky-400 font-bold py-2 px-4 rounded">
-              Join Room
+              Login
             </button>
           </form>
         </div>
