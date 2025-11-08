@@ -24,6 +24,7 @@ export default function Room() {
   const params = useParams();
   const roomId = params.roomId;
   console.log("ROOMID", roomId);
+  const [totaMembers, setTotalMembers] = useState(1);
   const [whiteBoardEvents, setWhiteBoardEvents] = useState<
     WhiteBoardEventType[]
   >([]);
@@ -49,6 +50,8 @@ export default function Room() {
       | Socket<DefaultEventsMap, DefaultEventsMap>
       | null
       | undefined = null;
+
+    let user: string;
     async function initializeRoom() {
       if (!roomId) {
         return;
@@ -63,7 +66,7 @@ export default function Room() {
             "Error occured in parsing data from localStorage..try login again"
           );
         }
-        const user = parsedData.user.username;
+        user = parsedData.user.username;
 
         if (!room) {
           toast.error("Error occured in joining room");
@@ -78,36 +81,31 @@ export default function Room() {
         if (!newSocket) throw new Error("Socket not initialized");
 
         setSocket(newSocket);
-        const emitSocketEvent=(s:Socket<DefaultEventsMap, DefaultEventsMap>,user:string)=>{
+        const emitSocketEvent = (
+          s: Socket<DefaultEventsMap, DefaultEventsMap>,
+          user: string
+        ) => {
           if (roomData?.joinedUsers && roomData.joinedUsers.length > 1) {
             s.emit(
               "joinRoom",
               { roomId: roomData.roomId, user: user },
-              (response:any) => {
-                console.log(response);
-              }
             );
           } else {
             s.emit(
               "createRoom",
               { roomId: roomData.roomId },
-              (response:any) => {
-                console.log(response);
-              }
             );
           }
-
-        }
+        };
         if (newSocket && newSocket.connected) {
           console.log("Socket already connected. Emitting createRoom...");
-          emitSocketEvent(newSocket,user)
-          
+          emitSocketEvent(newSocket, user);
         } else {
           newSocket.once("connect", () => {
             console.log("Connected to server. Emitting createRoom...");
             if (newSocket) {
               console.log("New Socket initialized");
-              emitSocketEvent(newSocket,user)
+              emitSocketEvent(newSocket, user);
             }
           });
         }
@@ -121,7 +119,14 @@ export default function Room() {
     return () => {
       if (newSocket && newSocket.connected) {
         console.log("Cleaning up socket connection.");
-        newSocket.disconnect(); 
+        if (user && roomId) {
+          // Send the specific room ID the user is leaving
+          newSocket.emit("leaveRoom", { roomId: roomId }, (response: any) => {
+            console.log("leaveRoom response:", response);
+            // Optionally check for response success here if needed, but the important part is the emission.
+          });
+        }
+        newSocket.disconnect();
       }
     };
   }, [roomId, navigate]);
@@ -131,30 +136,47 @@ export default function Room() {
 
     socket.on("roomCreated", (payload) => {
       console.log(`Room created! ID: ${payload.roomId}`);
-      toast.success(`Room created`);
+      toast.success(payload.message);
+      setTotalMembers(payload.count);
+    });
+
+    socket.on("roomJoined", (payload) => {
+      console.log("Room joined");
+      toast.success(payload.message);
+      setTotalMembers(payload.count);
+    });
+
+    socket.on("roomLeft", (payload) => {
+      console.log(payload.message);
+      toast.success(payload.message);
     });
 
     socket.on("userJoined", (payload) => {
       console.log(`New user joined: ${payload.username}`);
-      toast.success(`New user joined: ${payload.username}`);
+      toast.success(` ${payload.message}`);
+      setTotalMembers(payload.count);
+    });
+
+    socket.on("userLeft", (payload) => {
+      console.log("An user left the room", payload);
+      toast.success(payload.message);
+      setTotalMembers(payload.count);
     });
 
     socket.on("roomError", (payload) => {
       console.log(`ERROR: ${payload.message}`);
+      toast.error(payload.message);
     });
-
-    socket.on('userLeft',(payload)=>{
-      console.log("An user left the room",payload)
-      toast.success("An user left the room")
-
-    })
 
     // 💡 Listener for drawing events (as per previous discussion)
     // socket.on('drawing', (data) => { /* Redraw logic */ });
 
     return () => {
       socket.off("roomCreated");
+      socket.off("roomJoined");
+      socket.off("roomLeft");
       socket.off("userJoined");
+      socket.off("userLeft");
       socket.off("roomError");
     };
   }, [socket]);
@@ -223,6 +245,9 @@ export default function Room() {
     <>
       <div className="bg-stone-100">
         <h1 className="font-bold text-4xl px-20 pb-4 py-6">Your Whiteboard</h1>
+        <p className="font-bold text-4xl px-20 pb-4 py-6">
+          Current users {totaMembers}
+        </p>
         <div className="px-20">
           <WhiteBoardToolBar
             tool={tool}

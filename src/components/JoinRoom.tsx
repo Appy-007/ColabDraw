@@ -54,7 +54,7 @@ export default function JoinRoom({ isOpen, setShowModal }: FormPropTypes) {
         throw new Error('Error occured in creating room')
       }
       const roomId=resp.data.data.roomId
-      toast.success('Room created successfully !')
+      toast.success('Room joined successfully !')
       navigate(`/room/${roomId}`)
       } catch (error) {
         console.log(error) 
