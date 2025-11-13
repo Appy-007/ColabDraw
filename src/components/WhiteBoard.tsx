@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import rough from "roughjs";
 import type { WhiteBoardEventType } from "../pages/Room";
+import type { Socket } from "socket.io-client";
+import type { DefaultEventsMap } from "@socket.io/component-emitter";
 
 export type Point = [number, number];
 
@@ -12,10 +14,13 @@ type WhiteBoardPropsType = {
   setWhiteBoardEvents: React.Dispatch<
     React.SetStateAction<WhiteBoardEventType[]>
   >;
+  socket: | Socket<DefaultEventsMap, DefaultEventsMap> | null | undefined,
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   canvasctxRef: React.RefObject<CanvasRenderingContext2D | null>;
   tool: string;
   color: string;
+  roomId:string;
+  isOwner:boolean
 };
 
 export default function Whiteboard({
@@ -26,9 +31,13 @@ export default function Whiteboard({
   canvasctxRef,
   tool,
   color,
+  socket,
+  roomId,
+  isOwner
 }: WhiteBoardPropsType) {
   const [enableDrawing, setEnableDrawing] = useState<boolean>(false);
-  console.log("TOOLS", tool, color);
+  
+  // console.log("TOOLS", tool, color);
 
   useEffect(() => {
     const canv = canvasRef.current;
@@ -42,6 +51,23 @@ export default function Whiteboard({
       canvasctxRef.current = ctx;
     }
   }, [canvasRef, canvasctxRef]);
+
+  useEffect(()=>{
+    if(isOwner && !enableDrawing && whiteBoardEvents && whiteBoardEvents.length >0){
+      console.log("UseEffect called")
+      const lastwhiteBoardEvent=whiteBoardEvents[whiteBoardEvents.length -1]
+      sendBoardEventToSocket(lastwhiteBoardEvent)
+    }
+
+  }, [enableDrawing, whiteBoardEvents])
+
+  const sendBoardEventToSocket=(boardEvent : WhiteBoardEventType)=>{
+    if(socket && socket.connected){
+       console.log("SEND EVENT FROM CLIENT",boardEvent);
+      socket.emit('sendDrawingEvent', {roomId,event:boardEvent})
+      console.log("Executed");
+    }
+  }
 
   useLayoutEffect(() => {
     const canvas = rough.canvas(canvasRef.current!);
@@ -84,7 +110,7 @@ export default function Whiteboard({
 
   const handleMouseDown = (e: React.MouseEvent) => {
     const { offsetX, offsetY } = e.nativeEvent;
-    console.log("MOUSE DOWN", offsetX, offsetY);
+    // console.log("MOUSE DOWN", offsetX, offsetY);
     setEnableDrawing(true);
 
     setWhiteBoardEvents((prev: WhiteBoardEventType[]) => {
@@ -130,8 +156,7 @@ export default function Whiteboard({
   const handleMouseMove = (e: React.MouseEvent) => {
     if (enableDrawing) {
       const { offsetX, offsetY } = e.nativeEvent;
-      console.log("E", e.nativeEvent);
-      console.log("MOUSE MOVING", offsetX, offsetY);
+      // console.log("MOUSE MOVING", offsetX, offsetY);
       setWhiteBoardEvents((prevWhiteBoardEvents: WhiteBoardEventType[]) => {
         const lastWhiteBoardEventIndex = prevWhiteBoardEvents.length - 1;
         if (lastWhiteBoardEventIndex < 0) {
@@ -143,6 +168,15 @@ export default function Whiteboard({
         if (tool === "pencil") {
           const { path = [] } = lastwhiteBoardEvent;
           const updatedPath = [...path, [offsetX, offsetY]];
+          if (socket && socket.connected) {
+            console.log('ON MOUSE MOVE SOCKET EMITTED');
+                socket.emit('sendDrawingUpdate', { 
+                    roomId,
+                    type: 'pencil_event',
+                    index: lastWhiteBoardEventIndex,
+                    point: [offsetX, offsetY]
+                });
+            }
           return prevWhiteBoardEvents.map(
             (boardevent: WhiteBoardEventType, index: number) => {
               if (index === prevWhiteBoardEvents.length - 1) {
@@ -190,7 +224,7 @@ export default function Whiteboard({
 
   const handleMouseUp = (e: React.MouseEvent) => {
     const { offsetX, offsetY } = e.nativeEvent;
-    console.log("MOUSE UP", offsetX, offsetY);
+    // console.log("MOUSE UP", offsetX, offsetY);
     setUndoWhiteBoardEvents([])
     setEnableDrawing(false);
   };

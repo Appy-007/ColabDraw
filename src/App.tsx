@@ -31,7 +31,7 @@ function App() {
     <>
       <Nav/>
       <RouterProvider router={router}/>
-      <ToastContainer position="top-center" autoClose={3000}/>
+      <ToastContainer position="top-center" autoClose={2000}/>
     </>
   )
 }

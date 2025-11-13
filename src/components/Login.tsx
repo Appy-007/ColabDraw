@@ -27,7 +27,7 @@ export default function Login({ isOpen, setShowModal }: FormPropTypes) {
         password: data.password.toString().trim(),
       };
       const response = await authApi.login(apiData);
-      console.log(response);
+      // console.log(response);
       if (response?.data?.data)
         localStorage.setItem("data", JSON.stringify(response.data.data));
 

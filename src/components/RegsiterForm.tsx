@@ -27,9 +27,9 @@ export default function RegisterForm({ isOpen, setShowModal }: FormPropTypes) {
         email:data.email.toString().trim(),
         password:data.password.toString().trim()
       }
-      console.log(apiData)
+      // console.log(apiData)
       const response=await authApi.register(apiData);
-      console.log(response)
+      // console.log(response)
       if(response?.data?.data)
         localStorage.setItem('data',JSON.stringify(response.data.data))
       

@@ -23,7 +23,7 @@ export type WhiteBoardEventType = {
 export default function Room() {
   const params = useParams();
   const roomId = params.roomId;
-  console.log("ROOMID", roomId);
+  // console.log("ROOMID", roomId);
   const [totaMembers, setTotalMembers] = useState(1);
   const [whiteBoardEvents, setWhiteBoardEvents] = useState<
     WhiteBoardEventType[]
@@ -41,6 +41,7 @@ export default function Room() {
   };
   const [tool, setTool] = useState<string>(ToolType.PENCIL);
   const [color, setColor] = useState<string>("#000000");
+  const [isOwner,setIsOwner]= useState<boolean>(false)
 
   const [socket, setSocket] = useState<Socket | null | undefined>();
   const navigate = useNavigate();
@@ -52,6 +53,7 @@ export default function Room() {
       | undefined = null;
 
     let user: string;
+    let useremail:string;
     async function initializeRoom() {
       if (!roomId) {
         return;
@@ -67,6 +69,8 @@ export default function Room() {
           );
         }
         user = parsedData.user.username;
+        useremail= parsedData.user.email;
+
 
         if (!room) {
           toast.error("Error occured in joining room");
@@ -74,8 +78,10 @@ export default function Room() {
         }
 
         const roomData = room.data[0];
-        console.log("ROOM", roomData);
-        console.log("JOINED USERS", roomData?.joinedUsers);
+        // console.log("ROOM", roomData);
+        // console.log("JOINED USERS", roomData?.joinedUsers);
+        const isUserOwner=roomData.ownerEmailId === useremail;
+        setIsOwner(isUserOwner);
         newSocket = getAuthenticatedSocket();
 
         if (!newSocket) throw new Error("Socket not initialized");
@@ -135,33 +141,58 @@ export default function Room() {
     if (!socket) return;
 
     socket.on("roomCreated", (payload) => {
-      console.log(`Room created! ID: ${payload.roomId}`);
+      // console.log(`Room created! ID: ${payload.roomId}`);
       toast.success(payload.message);
       setTotalMembers(payload.count);
     });
 
     socket.on("roomJoined", (payload) => {
-      console.log("Room joined");
+      // console.log("Room joined");
       toast.success(payload.message);
       setTotalMembers(payload.count);
     });
 
     socket.on("roomLeft", (payload) => {
-      console.log(payload.message);
+      // console.log(payload.message);
       toast.success(payload.message);
     });
 
     socket.on("userJoined", (payload) => {
-      console.log(`New user joined: ${payload.username}`);
+      // console.log(`New user joined: ${payload.username}`);
       toast.success(` ${payload.message}`);
       setTotalMembers(payload.count);
     });
 
     socket.on("userLeft", (payload) => {
-      console.log("An user left the room", payload);
+      // console.log("An user left the room", payload);
       toast.success(payload.message);
       setTotalMembers(payload.count);
     });
+
+    socket.on("receiveDrawingUpdate" , (payload)=>{
+      setWhiteBoardEvents((prev)=>{
+        console.log('FUNCTION EXECUTION RECEIVE DRAWING UPDATE')
+        const index=payload.index;
+        if(index<0 || index > prev.length) return prev
+        return prev.map((event, i) => {
+                if (i === index) {
+                    return {
+                        ...event,
+                        path: [...(event.path || []), payload.point]
+                    };
+                }
+                return event;
+            });
+      })
+    })
+
+    socket.on("receiveDrawingEvent" , (payload)=>{
+      console.log("Drawing event from socket", payload.event);
+      setWhiteBoardEvents((prev)=>{
+        return [...prev,payload.event];
+      })
+
+    })
 
     socket.on("roomError", (payload) => {
       console.log(`ERROR: ${payload.message}`);
@@ -177,6 +208,7 @@ export default function Room() {
       socket.off("roomLeft");
       socket.off("userJoined");
       socket.off("userLeft");
+      socket.off("receiveDrawing");
       socket.off("roomError");
     };
   }, [socket]);
@@ -202,10 +234,10 @@ export default function Room() {
     setWhiteBoardEvents([]);
   };
 
-  console.log("UNDO ArRA", undoWhiteBoardEvents);
+  // console.log("UNDO ARRAY", undoWhiteBoardEvents);
 
   const handleUndoEvents = () => {
-    console.log("Undo clicked");
+    // console.log("Undo clicked");
     if (whiteBoardEvents.length > 0 && undoWhiteBoardEvents.length < 5) {
       const lastBoardEvent = whiteBoardEvents[whiteBoardEvents.length - 1];
       undoWhiteBoardEvents.push(lastBoardEvent);
@@ -225,7 +257,7 @@ export default function Room() {
   };
 
   const handleRedoEvents = () => {
-    console.log("Redo clicked");
+    // console.log("Redo clicked");
     if (undoWhiteBoardEvents.length > 0) {
       const lastundoevent =
         undoWhiteBoardEvents[undoWhiteBoardEvents.length - 1];
@@ -257,15 +289,19 @@ export default function Room() {
             onClearCanvasClick={handleClearCanvas}
             onUndoClick={handleUndoEvents}
             onRedoClick={handleRedoEvents}
+            isOwner={isOwner}
           />
           <Whiteboard
             whiteBoardEvents={whiteBoardEvents}
             setUndoWhiteBoardEvents={setUndoWhiteBoardEvents}
             setWhiteBoardEvents={setWhiteBoardEvents}
+            socket={socket}
             canvasRef={canvasRef}
             canvasctxRef={canvasctxRef}
             tool={tool}
             color={color}
+            roomId={roomId}
+            isOwner={isOwner}
           />
         </div>
       </div>

@@ -15,13 +15,13 @@ api.interceptors.request.use(config => {
   const data = localStorage.getItem('data');
   if(data){
     const parsedData=JSON.parse(data)
-    console.log('DATA',parsedData)
+    // console.log('DATA',parsedData)
     if (parsedData?.token) {
     config.headers.Authorization = `Bearer ${parsedData.token}`;
   }
   }
 
-  console.log("CONFIG",config)
+  // console.log("CONFIG",config)
   
   return config;
 }, error => {

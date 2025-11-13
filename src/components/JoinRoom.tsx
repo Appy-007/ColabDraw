@@ -48,7 +48,7 @@ export default function JoinRoom({ isOpen, setShowModal }: FormPropTypes) {
   
       try {
       const resp=await roomApi.joinRoom(socketData)
-      console.log(resp)
+      // console.log(resp)
       if(!resp){
         toast.error('Error occured in creating room')
         throw new Error('Error occured in creating room')
