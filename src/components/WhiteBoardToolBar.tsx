@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export default function WhiteBoardToolBar({tool,setTool,color,setColor,onClearCanvasClick,onUndoClick,onRedoClick,isOwner}:any) {
+export default function WhiteBoardToolBar({tool,setTool,color,setColor,onClearCanvasClick,onUndoClick,onRedoClick}:any) {
 
   const ToolType={
     PENCIL:'pencil',
@@ -10,7 +10,7 @@ export default function WhiteBoardToolBar({tool,setTool,color,setColor,onClearCa
   
   return (
     <>
-    {isOwner &&   <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between">
         <div className="flex gap-2 items-center justify-start">
           <div>
             <label htmlFor="pencil" className="pr-1">Pencil</label>
@@ -36,7 +36,7 @@ export default function WhiteBoardToolBar({tool,setTool,color,setColor,onClearCa
         <div>
             <button  className="px-2 py-1 rounded-md border border-blue-400 text-red-500 cursor-pointer" onClick={onClearCanvasClick}>Clear Board</button>
         </div>
-      </div>}
+      </div>
     </>
   );
 }

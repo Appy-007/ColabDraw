@@ -11,6 +11,7 @@ import type { DefaultEventsMap } from "@socket.io/component-emitter";
 export type PathType = number[];
 
 export type WhiteBoardEventType = {
+  id: string;
   type: string;
   offsetX: number;
   offsetY: number;
@@ -41,7 +42,7 @@ export default function Room() {
   };
   const [tool, setTool] = useState<string>(ToolType.PENCIL);
   const [color, setColor] = useState<string>("#000000");
-  const [isOwner,setIsOwner]= useState<boolean>(false)
+  const [isOwner, setIsOwner] = useState<boolean>(false);
 
   const [socket, setSocket] = useState<Socket | null | undefined>();
   const navigate = useNavigate();
@@ -53,7 +54,7 @@ export default function Room() {
       | undefined = null;
 
     let user: string;
-    let useremail:string;
+    let useremail: string;
     async function initializeRoom() {
       if (!roomId) {
         return;
@@ -69,8 +70,7 @@ export default function Room() {
           );
         }
         user = parsedData.user.username;
-        useremail= parsedData.user.email;
-
+        useremail = parsedData.user.email;
 
         if (!room) {
           toast.error("Error occured in joining room");
@@ -80,7 +80,7 @@ export default function Room() {
         const roomData = room.data[0];
         // console.log("ROOM", roomData);
         // console.log("JOINED USERS", roomData?.joinedUsers);
-        const isUserOwner=roomData.ownerEmailId === useremail;
+        const isUserOwner = roomData.ownerEmailId === useremail;
         setIsOwner(isUserOwner);
         newSocket = getAuthenticatedSocket();
 
@@ -92,15 +92,9 @@ export default function Room() {
           user: string
         ) => {
           if (roomData?.joinedUsers && roomData.joinedUsers.length > 1) {
-            s.emit(
-              "joinRoom",
-              { roomId: roomData.roomId, user: user },
-            );
+            s.emit("joinRoom", { roomId: roomData.roomId, user: user });
           } else {
-            s.emit(
-              "createRoom",
-              { roomId: roomData.roomId },
-            );
+            s.emit("createRoom", { roomId: roomData.roomId });
           }
         };
         if (newSocket && newSocket.connected) {
@@ -169,30 +163,65 @@ export default function Room() {
       setTotalMembers(payload.count);
     });
 
-    socket.on("receiveDrawingUpdate" , (payload)=>{
-      setWhiteBoardEvents((prev)=>{
-        console.log('FUNCTION EXECUTION RECEIVE DRAWING UPDATE')
-        const index=payload.index;
-        if(index<0 || index > prev.length) return prev
-        return prev.map((event, i) => {
-                if (i === index) {
-                    return {
-                        ...event,
-                        path: [...(event.path || []), payload.point]
-                    };
-                }
-                return event;
-            });
-      })
-    })
+    socket.on("receiveDrawingUpdate", (payload) => {
+      setWhiteBoardEvents((prev) => {
+        console.log("FUNCTION EXECUTION RECEIVE DRAWING UPDATE");
+        const id = payload.id;
+        const eventIndex = prev.findIndex((event) => event?.id === id);
+        if (eventIndex === -1) {
+          const placeholder: WhiteBoardEventType = {
+            id: payload.id,
+            type:
+              payload.type === "pencil_event"
+                ? "pencil"
+                : payload.type === "shape_event"
+                ? payload.shapeType || "line"
+                : "pencil",
+            offsetX: payload.offsetX ?? 0,
+            offsetY: payload.offsetY ?? 0,
+            stroke: payload.stroke ?? "#000000",
+            path:
+              payload.type === "pencil_event"
+                ? ([payload.point].filter(Boolean) as any)
+                : undefined,
+            currentX: payload.currentX,
+            currentY: payload.currentY,
+          };
+          return [...prev, placeholder];
+        }
 
-    socket.on("receiveDrawingEvent" , (payload)=>{
+        return prev.map((event) => {
+          if (event.id != payload.id) return event;
+          if (payload.type === "pencil_event") {
+            const newPath = [...(event.path ?? []), payload.point];
+            return {
+              ...event,
+              path:newPath,
+            };
+          } else if (payload.type === "shape_event") {
+            return {
+              ...event,
+              currentX: payload.currentX,
+              currentY: payload.currentY,
+            };
+          }
+          else{
+            return event;
+          }
+        });
+      });
+    });
+
+    socket.on("receiveDrawingEvent", (payload) => {
       console.log("Drawing event from socket", payload.event);
-      setWhiteBoardEvents((prev)=>{
-        return [...prev,payload.event];
-      })
-
-    })
+      setWhiteBoardEvents((prev) => {
+        const eventExists = prev.some(
+          (event) => event?.id === payload.event.id
+        );
+        if (eventExists) return prev;
+        return [...prev, payload.event];
+      });
+    });
 
     socket.on("roomError", (payload) => {
       console.log(`ERROR: ${payload.message}`);
@@ -208,7 +237,8 @@ export default function Room() {
       socket.off("roomLeft");
       socket.off("userJoined");
       socket.off("userLeft");
-      socket.off("receiveDrawing");
+      socket.off("receiveDrawingUpdate");
+      socket.off("receiveDrawingEvent");
       socket.off("roomError");
     };
   }, [socket]);
@@ -281,16 +311,17 @@ export default function Room() {
           Current users {totaMembers}
         </p>
         <div className="px-20">
-          <WhiteBoardToolBar
-            tool={tool}
-            setTool={setTool}
-            color={color}
-            setColor={setColor}
-            onClearCanvasClick={handleClearCanvas}
-            onUndoClick={handleUndoEvents}
-            onRedoClick={handleRedoEvents}
-            isOwner={isOwner}
-          />
+          {isOwner && (
+            <WhiteBoardToolBar
+              tool={tool}
+              setTool={setTool}
+              color={color}
+              setColor={setColor}
+              onClearCanvasClick={handleClearCanvas}
+              onUndoClick={handleUndoEvents}
+              onRedoClick={handleRedoEvents}
+            />
+          )}
           <Whiteboard
             whiteBoardEvents={whiteBoardEvents}
             setUndoWhiteBoardEvents={setUndoWhiteBoardEvents}
