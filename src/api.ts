@@ -42,7 +42,9 @@ export const roomApi={
 
   joinRoom: (data:CreateRoomType)=> api.post('/room/joinRoom',data),
 
-  checkRoom : (data:CheckRoomIdType)=> api.post('/room/checkIfRoomExists',data)
+  checkRoom : (data:CheckRoomIdType)=> api.post('/room/checkIfRoomExists',data),
+
+  fetchRoomScoreBoard : (data:CheckRoomIdType)=> api.post('/room/fetchRoomScoreBoard',data),
 }
 
 export default api; // Export the base instance for other modules

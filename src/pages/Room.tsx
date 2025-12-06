@@ -10,6 +10,7 @@ import { roomApi } from "../api";
 import type { DefaultEventsMap } from "@socket.io/component-emitter";
 import Scoreboard from "../components/Scoreboard";
 import Chat from "../components/Chat";
+import Guess from "../components/Guess";
 
 export type PathType = number[];
 
@@ -44,9 +45,6 @@ export default function Room() {
   const [whiteBoardEvents, setWhiteBoardEvents] = useState<
     WhiteBoardEventType[]
   >([]);
-  const [undoWhiteBoardEvents, setUndoWhiteBoardEvents] = useState<
-    WhiteBoardEventType[]
-  >([]);
   const [gameStatus, setGameStatus] = useState<
     "idle" | "playing" | "round_end" | "finished"
   >("idle");
@@ -77,7 +75,7 @@ export default function Room() {
   const [socket, setSocket] = useState<Socket | null | undefined>();
   const navigate = useNavigate();
 
-  console.log("CANVAS",canvasRef.current,canvasctxRef.current);
+  console.log("CANVAS", canvasRef.current, canvasctxRef.current);
 
   useEffect(() => {
     let newSocket:
@@ -189,6 +187,7 @@ export default function Room() {
     socket.on("userJoined", (payload) => {
       // console.log(`New user joined: ${payload.username}`);
       toast.success(` ${payload.message}`);
+      fetchScoreBoard();
       setTotalMembers(payload.count);
     });
 
@@ -257,25 +256,17 @@ export default function Room() {
       });
     });
 
-    socket.on("receiveUndoDrawingEvent", (payload) => {
-      console.log("Received undo drawing event from socket", payload.id);
-      const updatedWhiteBoardEvent = whiteBoardEvents.filter(
-        (event) => event.id != payload.id
-      );
-      setWhiteBoardEvents(updatedWhiteBoardEvent);
-    });
-
-    socket.on("receiveRedoDrawingEvent", (payload) => {
-      console.log("Received undo drawing event from socket", payload.event);
-      setWhiteBoardEvents((prev) => {
-        return [...prev, payload.event];
-      });
+    socket.on("receiveStartGameForDrawer", (payload) => {
+      console.log("Recieved receiveStartGameForDrawer event", payload);
+      setGameStatus(payload.mode);
+      setCurrentWord(payload.word);
+      setCurrentWordHint(payload.maskedWord);
+      setCurrentTimer(30);
     });
 
     socket.on("receiveStartGame", (payload) => {
       console.log("Recieved receiveStartGame event", payload);
       setGameStatus(payload.mode);
-      setCurrentWord(payload.word);
       setCurrentWordHint(payload.maskedWord);
       setCurrentTimer(30);
     });
@@ -296,9 +287,8 @@ export default function Room() {
       socket.off("userLeft");
       socket.off("receiveDrawingUpdate");
       socket.off("receiveDrawingEvent");
-      socket.off("receiveUndoDrawingEvent");
-      socket.off("receiveRedoDrawingEvent");
       socket.off("receiveStartGame");
+      socket.off("receiveStartGameForDrawer");
       socket.off("roomError");
     };
   }, [socket]);
@@ -314,15 +304,17 @@ export default function Room() {
   const handleClearCanvas = () => {
     console.log("CLEAR CANVAS EVENT CALLED");
     const canv = canvasRef.current;
-    const ctx = canvasctxRef.current as CanvasRenderingContext2D | null | undefined;; 
-
+    const ctx = canvasctxRef.current as
+      | CanvasRenderingContext2D
+      | null
+      | undefined;
 
     if (!canv || !ctx) {
       console.error("Canvas or context is not initialized.");
       return;
-    } 
+    }
 
-     ctx.fillStyle = "white";
+    ctx.fillStyle = "white";
 
     const scale = window.devicePixelRatio || 1; // FIX 2: Clear using logical (unscaled) dimensions
 
@@ -344,65 +336,18 @@ export default function Room() {
     }
   };
 
-  // console.log("UNDO ARRAY", undoWhiteBoardEvents);
-
-  const handleUndoEvents = () => {
-    if (whiteBoardEvents.length > 0 && undoWhiteBoardEvents.length < 5) {
-      const lastEvent = whiteBoardEvents[whiteBoardEvents.length - 1];
-      const lastId = lastEvent.id;
-
-      // Add to undo stack safely
-      setUndoWhiteBoardEvents((prev) => [...prev, lastEvent]);
-
-      // Inform others
-      if (socket?.connected) {
-        socket.emit("sendUndoDrawingEvent", {
-          roomId,
-          id: lastId,
-        });
-      }
-
-      // Clear canvas if last element
-      if (whiteBoardEvents.length === 1) {
-        handleClearCanvas();
-        return;
-      }
-
-      // Remove last event (correct filter)
-      setWhiteBoardEvents((prev) =>
-        prev.filter((event) => event.id !== lastId)
-      );
-    }
-  };
-
-  const handleRedoEvents = () => {
-    // console.log("Redo clicked");
-    if (undoWhiteBoardEvents.length > 0) {
-      const lastundoevent =
-        undoWhiteBoardEvents[undoWhiteBoardEvents.length - 1];
-      const lastundoeventindex = lastundoevent.id;
-      if (socket && socket.connected) {
-        socket.emit("sendRedoDrawingEvent", {
-          roomId,
-          id: lastundoeventindex,
-          event: lastundoevent,
-        });
-      }
-      setWhiteBoardEvents((prev) => {
-        return [...prev, lastundoevent];
-      });
-
-      setUndoWhiteBoardEvents((prev) => {
-        const updatedUndoWhiteBoardEvents = [...prev];
-        updatedUndoWhiteBoardEvents.pop();
-        return updatedUndoWhiteBoardEvents;
-      });
-    }
-  };
-
   const handleStartGame = () => {
     if (socket && socket.connected) {
       socket.emit("startGame", { roomId: roomId, user: currentDrawer });
+    }
+  };
+
+  const fetchScoreBoard = async () => {
+    try {
+      const response = await roomApi.fetchRoomScoreBoard({ roomId: roomId! });
+      setScoredboard(response.data.data);
+    } catch (error) {
+      console.log(error);
     }
   };
 
@@ -420,11 +365,19 @@ export default function Room() {
               color={color}
               setColor={setColor}
               onClearCanvasClick={handleClearCanvas}
-              onUndoClick={handleUndoEvents}
-              onRedoClick={handleRedoEvents}
               onLeaveRoom={handleLeaveRoom}
+              gameStatus={gameStatus}
+              setGameStatus={setGameStatus}
             />
           )}
+
+          {gameStatus=== "playing" && <Guess
+            isOwner={isOwner}
+            guessInput={guessInput}
+            setGuessInput={setGuessInput}
+            currentWord={currentWord}
+            currentWordHint={currentWordHint}
+          />} 
           <div className="flex max-md:flex-col-reverse flex-wrap max-md:items-center items-start gap-4 flex-1 ">
             <div className="flex max-md:flex-row flex-col my-10 gap-6 max-md:w-full w-3/12">
               <Scoreboard
@@ -443,7 +396,6 @@ export default function Room() {
             </div>
             <Whiteboard
               whiteBoardEvents={whiteBoardEvents}
-              setUndoWhiteBoardEvents={setUndoWhiteBoardEvents}
               setWhiteBoardEvents={setWhiteBoardEvents}
               socket={socket}
               canvasRef={canvasRef}
@@ -453,7 +405,10 @@ export default function Room() {
               roomId={roomId}
               isOwner={isOwner}
               gameStatus={gameStatus}
+              setGameStatus={setGameStatus}
               handleStartGame={handleStartGame}
+              currentWord={currentWord}
+              currentWordHint={currentWordHint}
             />
           </div>
         </div>

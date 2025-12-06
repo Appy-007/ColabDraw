@@ -1,14 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import Timer from "./Timer";
+
 export default function WhiteBoardToolBar({
   tool,
   setTool,
   color,
   setColor,
   onClearCanvasClick,
-  onUndoClick,
-  onRedoClick,
-  onLeaveRoom
+  onLeaveRoom,
+  gameStatus,
+  setGameStatus
 }: any) {
   const ToolType = {
     PENCIL: "pencil",
@@ -66,18 +68,7 @@ export default function WhiteBoardToolBar({
           />
         </div>
         <div>
-          <button
-            className="px-2 py-1 rounded-md border border-blue-400 mx-2 cursor-pointer"
-            onClick={onUndoClick}
-          >
-            Undo
-          </button>
-          <button
-            className="px-2 py-1 rounded-md border border-blue-400 mx-2 cursor-pointer"
-            onClick={onRedoClick}
-          >
-            Redo
-          </button>
+          {gameStatus=== "playing" && <Timer gameStatus={gameStatus}  setGameStatus={setGameStatus} onClearCanvasClick={onClearCanvasClick}/> }
         </div>
         <div className="flex gap-2">
           <button

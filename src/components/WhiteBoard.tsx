@@ -9,9 +9,6 @@ export type Point = [number, number];
 
 type WhiteBoardPropsType = {
   whiteBoardEvents: WhiteBoardEventType[];
-  setUndoWhiteBoardEvents: React.Dispatch<
-    React.SetStateAction<WhiteBoardEventType[]>
-  >;
   setWhiteBoardEvents: React.Dispatch<
     React.SetStateAction<WhiteBoardEventType[]>
   >;
@@ -23,12 +20,16 @@ type WhiteBoardPropsType = {
   roomId: string | undefined;
   isOwner: boolean;
   gameStatus?: string;
+  setGameStatus?: React.Dispatch<
+    React.SetStateAction<"playing" | "idle" | "round_end" | "finished">
+  >;
   handleStartGame: () => void;
+  currentWord?: string;
+  currentWordHint?: string;
 };
 
 export default function Whiteboard({
   whiteBoardEvents,
-  setUndoWhiteBoardEvents,
   setWhiteBoardEvents,
   canvasRef,
   canvasctxRef,
@@ -39,6 +40,8 @@ export default function Whiteboard({
   isOwner,
   gameStatus,
   handleStartGame,
+  currentWord,
+  currentWordHint
 }: WhiteBoardPropsType) {
   const [enableDrawing, setEnableDrawing] = useState<boolean>(false);
 
@@ -72,6 +75,7 @@ export default function Whiteboard({
 
   useLayoutEffect(() => {
     const canvasElement = canvasRef.current;
+    console.log("UseLayout ",canvasElement);
     if (canvasElement) {
       const canvas = rough.canvas(canvasElement);
       console.log("UseLayout called");
@@ -286,7 +290,6 @@ export default function Whiteboard({
     // console.log("MOUSE UP", offsetX, offsetY);
     if (!isOwner) return;
     currentEventIdRef.current = null;
-    setUndoWhiteBoardEvents([]);
     setEnableDrawing(false);
   };
 

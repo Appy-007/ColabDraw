@@ -1,0 +1,57 @@
+import { useEffect, useRef, useState } from "react";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export type TimerProps = {
+  gameStatus: string;
+  setGameStatus: any;
+  onClearCanvasClick:()=>void
+};
+export default function Timer(props: TimerProps) {
+  const { gameStatus, setGameStatus,onClearCanvasClick } = props;
+  const [roundTimer, setRoundTimer] = useState(20);
+
+  const timerIdRef = useRef<number>(null);
+  useEffect(() => {
+    if (gameStatus === "playing") {
+      const reduceTimer = () => {
+        setRoundTimer((prev) => prev - 1);
+      };
+
+      timerIdRef.current = window.setInterval(reduceTimer, 1000);
+    }
+
+    return () => {
+      if (timerIdRef.current) {
+        window.clearInterval(timerIdRef.current);
+      }
+    };
+  }, [gameStatus]);
+
+  useEffect(() => {
+    if (roundTimer <= 0) {
+      if (timerIdRef.current) {
+        window.clearInterval(timerIdRef.current);
+      }
+      onClearCanvasClick();
+      setGameStatus("round_end");
+    }
+  }, [roundTimer, setGameStatus]);
+
+  const timerClasses =
+    roundTimer <= 10
+      ? "bg-red-600 text-white shadow-xl shadow-red-800/50 animate-pulse" // Danger state
+      : "bg-green-500 text-gray-900 shadow-lg shadow-green-700/50"; // Normal state
+
+  return (
+    <>
+      <div
+        className={`
+        ${timerClasses} 
+        inline-flex items-center justify-center  p-2 rounded-full text-xl font-extrabold tracking-wider  transition-all duration-500 ease-in-out min-w-[80px] select-none
+      `}
+      >
+        {roundTimer}
+      </div>
+    </>
+  );
+}
