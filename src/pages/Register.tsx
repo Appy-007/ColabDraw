@@ -12,16 +12,15 @@ export default function Register() {
   const handleModal = (num: number) => setIsModalOpen(num);
   return (
     <>
-      <div className="flex h-screen items-center justify-center bg-stone-100">
+      <div className="flex h-10/12 items-center justify-center  bg-stone-100">
         <div className="flex flex-col gap-10">
           <div>
-            <h1 className="font-bold text-4xl pb-4">Collaborative</h1>
-            <p className="font-bold text-4xl">WhiteBoard for Teams</p>
+            <h1 className="font-bold text-4xl pb-2">Play, Draw, Guess !</h1>
           </div>
 
           <div>
             <p className="text-gray-400 text-md text-left">
-              Brainstorm,design and plan together, in real time
+             The drawing game just to enjoy at your desk with your colleagues
             </p>
           </div>
 

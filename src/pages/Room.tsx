@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useEffect, useRef, useState } from "react";
 import Whiteboard from "../components/WhiteBoard";
 import WhiteBoardToolBar from "../components/WhiteBoardToolBar";
@@ -7,6 +8,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { roomApi } from "../api";
 import type { DefaultEventsMap } from "@socket.io/component-emitter";
+import Scoreboard from "../components/Scoreboard";
+import Chat from "../components/Chat";
 
 export type PathType = number[];
 
@@ -21,10 +24,22 @@ export type WhiteBoardEventType = {
   currentY?: number;
 };
 
+export type ScoreEntry = {
+  userId: string;
+  username: string;
+  score: number;
+};
+
+type ChatMessage = {
+  senderId: string;
+  senderName: string;
+  text: string;
+  isCorrectGuess: boolean;
+};
+
 export default function Room() {
   const params = useParams();
   const roomId = params.roomId;
-  // console.log("ROOMID", roomId);
   const [totaMembers, setTotalMembers] = useState(1);
   const [whiteBoardEvents, setWhiteBoardEvents] = useState<
     WhiteBoardEventType[]
@@ -32,8 +47,23 @@ export default function Room() {
   const [undoWhiteBoardEvents, setUndoWhiteBoardEvents] = useState<
     WhiteBoardEventType[]
   >([]);
+  const [gameStatus, setGameStatus] = useState<
+    "idle" | "playing" | "round_end" | "finished"
+  >("idle");
+  const [currentDrawer, setcurrentDrawer] = useState<string>("");
+  const [currentWordHint, setCurrentWordHint] = useState("");
+  const [currentWord, setCurrentWord] = useState("");
+  const [currentTimer, setCurrentTimer] = useState<number>();
+  const [scoreboard, setScoredboard] = useState<ScoreEntry[]>([
+    { userId: "", username: "", score: 0 },
+  ]);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [guessInput, setGuessInput] = useState("");
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasctxRef = useRef(null);
+  const chatBoxRef = useRef<HTMLDivElement>(null);
 
   const ToolType = {
     PENCIL: "pencil",
@@ -46,6 +76,8 @@ export default function Room() {
 
   const [socket, setSocket] = useState<Socket | null | undefined>();
   const navigate = useNavigate();
+
+  console.log("CANVAS",canvasRef.current,canvasctxRef.current);
 
   useEffect(() => {
     let newSocket:
@@ -71,6 +103,7 @@ export default function Room() {
         }
         user = parsedData.user.username;
         useremail = parsedData.user.email;
+        setcurrentDrawer(user);
 
         if (!room) {
           toast.error("Error occured in joining room");
@@ -78,9 +111,11 @@ export default function Room() {
         }
 
         const roomData = room.data[0];
-        // console.log("ROOM", roomData);
+        console.log("ROOM", roomData);
         // console.log("JOINED USERS", roomData?.joinedUsers);
         const isUserOwner = roomData.ownerEmailId === useremail;
+        setCurrentUserEmail(roomData.ownerEmailId);
+        setScoredboard(roomData?.scoreBoard || []);
         setIsOwner(isUserOwner);
         newSocket = getAuthenticatedSocket();
 
@@ -196,7 +231,7 @@ export default function Room() {
             const newPath = [...(event.path ?? []), payload.point];
             return {
               ...event,
-              path:newPath,
+              path: newPath,
             };
           } else if (payload.type === "shape_event") {
             return {
@@ -204,8 +239,7 @@ export default function Room() {
               currentX: payload.currentX,
               currentY: payload.currentY,
             };
-          }
-          else{
+          } else {
             return event;
           }
         });
@@ -221,6 +255,29 @@ export default function Room() {
         if (eventExists) return prev;
         return [...prev, payload.event];
       });
+    });
+
+    socket.on("receiveUndoDrawingEvent", (payload) => {
+      console.log("Received undo drawing event from socket", payload.id);
+      const updatedWhiteBoardEvent = whiteBoardEvents.filter(
+        (event) => event.id != payload.id
+      );
+      setWhiteBoardEvents(updatedWhiteBoardEvent);
+    });
+
+    socket.on("receiveRedoDrawingEvent", (payload) => {
+      console.log("Received undo drawing event from socket", payload.event);
+      setWhiteBoardEvents((prev) => {
+        return [...prev, payload.event];
+      });
+    });
+
+    socket.on("receiveStartGame", (payload) => {
+      console.log("Recieved receiveStartGame event", payload);
+      setGameStatus(payload.mode);
+      setCurrentWord(payload.word);
+      setCurrentWordHint(payload.maskedWord);
+      setCurrentTimer(30);
     });
 
     socket.on("roomError", (payload) => {
@@ -239,6 +296,9 @@ export default function Room() {
       socket.off("userLeft");
       socket.off("receiveDrawingUpdate");
       socket.off("receiveDrawingEvent");
+      socket.off("receiveUndoDrawingEvent");
+      socket.off("receiveRedoDrawingEvent");
+      socket.off("receiveStartGame");
       socket.off("roomError");
     };
   }, [socket]);
@@ -252,37 +312,66 @@ export default function Room() {
   }
 
   const handleClearCanvas = () => {
+    console.log("CLEAR CANVAS EVENT CALLED");
     const canv = canvasRef.current;
-    const ctx = canv?.getContext("2d");
-    ctx.fillStyle = "white";
-    canvasctxRef.current.clearRect(
+    const ctx = canvasctxRef.current as CanvasRenderingContext2D | null | undefined;; 
+
+
+    if (!canv || !ctx) {
+      console.error("Canvas or context is not initialized.");
+      return;
+    } 
+
+     ctx.fillStyle = "white";
+
+    const scale = window.devicePixelRatio || 1; // FIX 2: Clear using logical (unscaled) dimensions
+
+    ctx.clearRect(
       0,
       0,
-      canvasRef.current?.width,
-      canvasRef.current?.height
+      canv.width / scale, // Logical Width
+      canv.height / scale // Logical Height
     );
+
     setWhiteBoardEvents([]);
+  };
+
+  const handleLeaveRoom = () => {
+    if (socket && socket.connected) {
+      socket.emit("leaveRoom", { roomId: roomId }, (response: any) => {
+        console.log("leaveRoom response:", response);
+      });
+    }
   };
 
   // console.log("UNDO ARRAY", undoWhiteBoardEvents);
 
   const handleUndoEvents = () => {
-    // console.log("Undo clicked");
     if (whiteBoardEvents.length > 0 && undoWhiteBoardEvents.length < 5) {
-      const lastBoardEvent = whiteBoardEvents[whiteBoardEvents.length - 1];
-      undoWhiteBoardEvents.push(lastBoardEvent);
-      if (whiteBoardEvents.length == 1) {
-        handleClearCanvas();
-      } else {
-        setWhiteBoardEvents((prev) => {
-          const lastBoardEventIndex = prev.length - 1;
-          return prev.filter((boardevent, index) => {
-            if (index !== lastBoardEventIndex) {
-              return boardevent;
-            }
-          });
+      const lastEvent = whiteBoardEvents[whiteBoardEvents.length - 1];
+      const lastId = lastEvent.id;
+
+      // Add to undo stack safely
+      setUndoWhiteBoardEvents((prev) => [...prev, lastEvent]);
+
+      // Inform others
+      if (socket?.connected) {
+        socket.emit("sendUndoDrawingEvent", {
+          roomId,
+          id: lastId,
         });
       }
+
+      // Clear canvas if last element
+      if (whiteBoardEvents.length === 1) {
+        handleClearCanvas();
+        return;
+      }
+
+      // Remove last event (correct filter)
+      setWhiteBoardEvents((prev) =>
+        prev.filter((event) => event.id !== lastId)
+      );
     }
   };
 
@@ -291,6 +380,14 @@ export default function Room() {
     if (undoWhiteBoardEvents.length > 0) {
       const lastundoevent =
         undoWhiteBoardEvents[undoWhiteBoardEvents.length - 1];
+      const lastundoeventindex = lastundoevent.id;
+      if (socket && socket.connected) {
+        socket.emit("sendRedoDrawingEvent", {
+          roomId,
+          id: lastundoeventindex,
+          event: lastundoevent,
+        });
+      }
       setWhiteBoardEvents((prev) => {
         return [...prev, lastundoevent];
       });
@@ -303,11 +400,16 @@ export default function Room() {
     }
   };
 
+  const handleStartGame = () => {
+    if (socket && socket.connected) {
+      socket.emit("startGame", { roomId: roomId, user: currentDrawer });
+    }
+  };
+
   return (
     <>
       <div className="bg-stone-100">
-        <h1 className="font-bold text-4xl px-20 pb-4 py-6">Your Whiteboard</h1>
-        <p className="font-bold text-4xl px-20 pb-4 py-6">
+        <p className="font-bold text-lg px-20 pb-2 py-2 text-gray-700">
           Current users {totaMembers}
         </p>
         <div className="px-20">
@@ -320,20 +422,40 @@ export default function Room() {
               onClearCanvasClick={handleClearCanvas}
               onUndoClick={handleUndoEvents}
               onRedoClick={handleRedoEvents}
+              onLeaveRoom={handleLeaveRoom}
             />
           )}
-          <Whiteboard
-            whiteBoardEvents={whiteBoardEvents}
-            setUndoWhiteBoardEvents={setUndoWhiteBoardEvents}
-            setWhiteBoardEvents={setWhiteBoardEvents}
-            socket={socket}
-            canvasRef={canvasRef}
-            canvasctxRef={canvasctxRef}
-            tool={tool}
-            color={color}
-            roomId={roomId}
-            isOwner={isOwner}
-          />
+          <div className="flex max-md:flex-col-reverse flex-wrap max-md:items-center items-start gap-4 flex-1 ">
+            <div className="flex max-md:flex-row flex-col my-10 gap-6 max-md:w-full w-3/12">
+              <Scoreboard
+                scoreBoard={scoreboard}
+                currentDrawer={currentDrawer}
+                currentUserEmail={currentUserEmail}
+              />
+              <Chat
+                chatBoxRef={chatBoxRef}
+                chatMessages={chatMessages}
+                guessInput={guessInput}
+                setGuessInput={setGuessInput}
+                gameStatus={gameStatus}
+                currentUserEmail={currentUserEmail}
+              />
+            </div>
+            <Whiteboard
+              whiteBoardEvents={whiteBoardEvents}
+              setUndoWhiteBoardEvents={setUndoWhiteBoardEvents}
+              setWhiteBoardEvents={setWhiteBoardEvents}
+              socket={socket}
+              canvasRef={canvasRef}
+              canvasctxRef={canvasctxRef}
+              tool={tool}
+              color={color}
+              roomId={roomId}
+              isOwner={isOwner}
+              gameStatus={gameStatus}
+              handleStartGame={handleStartGame}
+            />
+          </div>
         </div>
       </div>
     </>

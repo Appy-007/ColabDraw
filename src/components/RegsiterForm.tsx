@@ -44,7 +44,7 @@ export default function RegisterForm({ isOpen, setShowModal }: FormPropTypes) {
   };
   return (
     <>
-      <Modal isOpen={isOpen} onClose={() => setShowModal(-1)}>
+      <Modal isOpen={isOpen} onClose={() => setShowModal(-1)} targetRoot='modal-root'>
         <div>
           <form
             ref={formRef}

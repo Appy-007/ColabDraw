@@ -1,20 +1,20 @@
 // src/components/Modal.js
-import { type ReactElement } from 'react';
-import ReactDOM from 'react-dom';
+import { type ReactElement } from "react";
+import ReactDOM from "react-dom";
 
-type ModalPropTypes={
-    isOpen:boolean,
-    onClose:()=>void,
-    children:ReactElement
-}
+type ModalPropTypes = {
+  isOpen: boolean;
+  onClose?: () => void;
+  targetRoot: string;
+  children: ReactElement;
+};
 
-const Modal = ({ isOpen, onClose, children }:ModalPropTypes) => {
-
+const Modal = ({ isOpen, onClose,targetRoot='modal-root', children }: ModalPropTypes) => {
   if (!isOpen) return null;
 
   return ReactDOM.createPortal(
     <div
-      className="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-md z-50"
+      className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-md z-50"
       onClick={onClose} // close on backdrop click
     >
       <div
@@ -23,7 +23,8 @@ const Modal = ({ isOpen, onClose, children }:ModalPropTypes) => {
       >
         {children}
       </div>
-    </div>,document.getElementById('modal-root') !
+    </div>,
+    document.getElementById(targetRoot)!
   );
 };
 
