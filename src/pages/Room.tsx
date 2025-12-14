@@ -59,7 +59,7 @@ export default function Room() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState<ChatMessage>();
   const [guessInput, setGuessInput] = useState("");
-  const [enableGuessInput,setEnableGuessInput]=useState(true)
+  const [enableGuessInput, setEnableGuessInput] = useState(true);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasctxRef = useRef(null);
@@ -77,13 +77,13 @@ export default function Room() {
   const [socket, setSocket] = useState<Socket | null | undefined>();
   const navigate = useNavigate();
 
-   const getDataFromLocalStorage = localStorage.getItem("data") || "";
-    const parsedData = JSON.parse(getDataFromLocalStorage);
-    if (!parsedData && !parsedData.user.username) {
-      throw new Error(
-        "Error occured in parsing data from localStorage..try login again"
-      );
-    }
+  const getDataFromLocalStorage = localStorage.getItem("data") || "";
+  const parsedData = JSON.parse(getDataFromLocalStorage);
+  if (!parsedData && !parsedData.user.username) {
+    throw new Error(
+      "Error occured in parsing data from localStorage..try login again"
+    );
+  }
 
   console.log("CANVAS", canvasRef.current, canvasctxRef.current);
 
@@ -95,7 +95,7 @@ export default function Room() {
 
     let user: string;
     let useremail: string;
-   
+
     async function initializeRoom() {
       if (!roomId) {
         return;
@@ -279,26 +279,27 @@ export default function Room() {
       setCurrentTimer(30);
     });
 
-    socket.on("wrongGuess",(payload)=>{
+    socket.on("wrongGuess", (payload) => {
       toast.error(payload.message);
-    })
+    });
 
-    socket.on("correctGuess", (payload)=>{
+    socket.on("correctGuess", (payload) => {
       toast.info(payload.message);
       setEnableGuessInput(false);
+    });
 
-    })
-
-    socket.on("updateScoreBoard", (payload)=>{
-      if(payload?.scoreBoard){
-        setScoredboard(payload.scoreBoard)
+    socket.on("updateScoreBoard", (payload) => {
+      if (payload?.scoreBoard) {
+        setScoredboard(payload.scoreBoard);
       }
-    })
+    });
 
-    socket.on("endGame" , (payload)=>{
-      setGameStatus(payload.mode);
-      toast.info(payload?.message);
-    })
+    socket.on("endGame", (payload) => {
+      if (payload) {
+        setGameStatus(payload.mode);
+        toast.info(payload.message);
+      }
+    });
 
     socket.on("roomError", (payload) => {
       console.log(`ERROR: ${payload.message}`);
@@ -389,7 +390,15 @@ export default function Room() {
       socket.emit("checkWord", {
         roomId,
         userId: parsedData.user.email,
-        word:guessInput,
+        word: guessInput,
+      });
+    }
+  };
+
+  const handleRoundEnd = () => {
+    if (socket && socket.connected) {
+      socket.emit("roundEnd", {
+        roomId,
       });
     }
   };
@@ -403,11 +412,13 @@ export default function Room() {
         <div className="px-20">
           {isOwner && (
             <WhiteBoardToolBar
+              isOwner={isOwner}
               tool={tool}
               setTool={setTool}
               color={color}
               setColor={setColor}
               onClearCanvasClick={handleClearCanvas}
+              onRoundEnd={handleRoundEnd}
               onLeaveRoom={handleLeaveRoom}
               gameStatus={gameStatus}
               setGameStatus={setGameStatus}

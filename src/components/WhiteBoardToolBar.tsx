@@ -8,9 +8,11 @@ export default function WhiteBoardToolBar({
   color,
   setColor,
   onClearCanvasClick,
+  onRoundEnd,
   onLeaveRoom,
   gameStatus,
   setGameStatus,
+  isOwner
 }: any) {
   const ToolType = {
     PENCIL: "pencil",
@@ -73,6 +75,8 @@ export default function WhiteBoardToolBar({
               gameStatus={gameStatus}
               setGameStatus={setGameStatus}
               onClearCanvasClick={onClearCanvasClick}
+              isOwner={isOwner}
+              onRoundEnd={onRoundEnd}
             />
           )}
         </div>

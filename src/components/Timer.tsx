@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from "react";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type TimerProps = {
+  isOwner: boolean;
   gameStatus: string;
   setGameStatus: any;
-  onClearCanvasClick:()=>void
+  onClearCanvasClick:()=>void;
+  onRoundEnd:()=>void;
 };
 export default function Timer(props: TimerProps) {
-  const { gameStatus, setGameStatus,onClearCanvasClick } = props;
+  const {isOwner, gameStatus, setGameStatus,onClearCanvasClick,onRoundEnd } = props;
   const [roundTimer, setRoundTimer] = useState(20);
 
   const timerIdRef = useRef<number>(null);
@@ -31,6 +33,9 @@ export default function Timer(props: TimerProps) {
     if (roundTimer <= 0) {
       if (timerIdRef.current) {
         window.clearInterval(timerIdRef.current);
+      }
+      if(isOwner){
+        onRoundEnd()
       }
       onClearCanvasClick();
       setGameStatus("round_end");

@@ -1,11 +1,9 @@
-import {useState } from "react";
+import { useState } from "react";
 import Modal from "./Modal";
 import { nanoid } from "nanoid";
 import { toast } from "react-toastify";
 import { roomApi } from "../api";
 import { useNavigate } from "react-router-dom";
-// import getAuthenticatedSocket from "../utils/socket";
-// import type { Socket } from "socket.io-client";
 
 export type FormPropTypes = {
   isOpen: boolean;
@@ -18,15 +16,11 @@ type CreateRoomType = {
 };
 
 export default function CreateRoom({ isOpen, setShowModal }: FormPropTypes) {
-  const navigate=useNavigate()
+  const navigate = useNavigate();
   const [createRoom, setCreateRoom] = useState<CreateRoomType>({
     name: "",
     roomId: "",
   });
-
-
-
-  
 
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -67,36 +61,36 @@ export default function CreateRoom({ isOpen, setShowModal }: FormPropTypes) {
     }
   };
 
- 
-
-  const handleSubmit = async(event: React.ChangeEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.ChangeEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!createRoom.name || !createRoom.roomId) {
       toast.error("Please enter all the fields");
       return;
     }
-    const socketData = {
+    const roomData = {
       name: createRoom.name.trim(),
       roomId: createRoom.roomId.trim(),
     };
 
     try {
-    const resp=await roomApi.createRoom(socketData)
-    // console.log(resp)
-    if(!resp){
-      toast.error('Error occured in creating room')
-      throw new Error('Error occured in creating room')
-    }
-    const roomId=resp.data.data.roomId
-    toast.success('Room created successfully !')
-    navigate(`/room/${roomId}`)
+      const resp = await roomApi.createRoom(roomData);
+      if (!resp) {
+        toast.error("Error occured in creating room");
+        throw new Error("Error occured in creating room");
+      }
+      const roomId = resp.data.data.roomId;
+      navigate(`/room/${roomId}`);
     } catch (error) {
-      console.log(error) 
-    } 
+      console.log(error);
+    }
   };
   return (
     <>
-      <Modal isOpen={isOpen} onClose={() => setShowModal(-1)} targetRoot="modal-root">
+      <Modal
+        isOpen={isOpen}
+        onClose={() => setShowModal(-1)}
+        targetRoot="modal-root"
+      >
         <div>
           <h2 className="text-2xl font-bold mb-4 text-sky-400 ">Create Room</h2>
           <form
