@@ -10,7 +10,7 @@ export default function WhiteBoardToolBar({
   onClearCanvasClick,
   onLeaveRoom,
   gameStatus,
-  setGameStatus
+  setGameStatus,
 }: any) {
   const ToolType = {
     PENCIL: "pencil",
@@ -68,7 +68,13 @@ export default function WhiteBoardToolBar({
           />
         </div>
         <div>
-          {gameStatus=== "playing" && <Timer gameStatus={gameStatus}  setGameStatus={setGameStatus} onClearCanvasClick={onClearCanvasClick}/> }
+          {gameStatus === "playing" && (
+            <Timer
+              gameStatus={gameStatus}
+              setGameStatus={setGameStatus}
+              onClearCanvasClick={onClearCanvasClick}
+            />
+          )}
         </div>
         <div className="flex gap-2">
           <button

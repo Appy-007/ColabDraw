@@ -57,7 +57,9 @@ export default function Room() {
   ]);
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState<ChatMessage>();
   const [guessInput, setGuessInput] = useState("");
+  const [enableGuessInput,setEnableGuessInput]=useState(true)
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasctxRef = useRef(null);
@@ -75,6 +77,14 @@ export default function Room() {
   const [socket, setSocket] = useState<Socket | null | undefined>();
   const navigate = useNavigate();
 
+   const getDataFromLocalStorage = localStorage.getItem("data") || "";
+    const parsedData = JSON.parse(getDataFromLocalStorage);
+    if (!parsedData && !parsedData.user.username) {
+      throw new Error(
+        "Error occured in parsing data from localStorage..try login again"
+      );
+    }
+
   console.log("CANVAS", canvasRef.current, canvasctxRef.current);
 
   useEffect(() => {
@@ -85,6 +95,7 @@ export default function Room() {
 
     let user: string;
     let useremail: string;
+   
     async function initializeRoom() {
       if (!roomId) {
         return;
@@ -92,13 +103,7 @@ export default function Room() {
 
       try {
         const room = await checkIfRoomExits(roomId);
-        const getDataFromLocalStorage = localStorage.getItem("data") || "";
-        const parsedData = JSON.parse(getDataFromLocalStorage);
-        if (!parsedData && !parsedData.user.username) {
-          throw new Error(
-            "Error occured in parsing data from localStorage..try login again"
-          );
-        }
+
         user = parsedData.user.username;
         useremail = parsedData.user.email;
         setcurrentDrawer(user);
@@ -266,10 +271,34 @@ export default function Room() {
 
     socket.on("receiveStartGame", (payload) => {
       console.log("Recieved receiveStartGame event", payload);
+      handleClearCanvas();
       setGameStatus(payload.mode);
       setCurrentWordHint(payload.maskedWord);
+      setEnableGuessInput(true);
+      setGuessInput("");
       setCurrentTimer(30);
     });
+
+    socket.on("wrongGuess",(payload)=>{
+      toast.error(payload.message);
+    })
+
+    socket.on("correctGuess", (payload)=>{
+      toast.info(payload.message);
+      setEnableGuessInput(false);
+
+    })
+
+    socket.on("updateScoreBoard", (payload)=>{
+      if(payload?.scoreBoard){
+        setScoredboard(payload.scoreBoard)
+      }
+    })
+
+    socket.on("endGame" , (payload)=>{
+      setGameStatus(payload.mode);
+      toast.info(payload?.message);
+    })
 
     socket.on("roomError", (payload) => {
       console.log(`ERROR: ${payload.message}`);
@@ -289,6 +318,10 @@ export default function Room() {
       socket.off("receiveDrawingEvent");
       socket.off("receiveStartGame");
       socket.off("receiveStartGameForDrawer");
+      socket.off("correctGuess");
+      socket.off("wrongGuess");
+      socket.off("updateScoreBoard");
+      socket.off("endGame");
       socket.off("roomError");
     };
   }, [socket]);
@@ -351,6 +384,16 @@ export default function Room() {
     }
   };
 
+  const checkGuessedInput = () => {
+    if (socket && socket.connected) {
+      socket.emit("checkWord", {
+        roomId,
+        userId: parsedData.user.email,
+        word:guessInput,
+      });
+    }
+  };
+
   return (
     <>
       <div className="bg-stone-100">
@@ -371,13 +414,17 @@ export default function Room() {
             />
           )}
 
-          {gameStatus=== "playing" && <Guess
-            isOwner={isOwner}
-            guessInput={guessInput}
-            setGuessInput={setGuessInput}
-            currentWord={currentWord}
-            currentWordHint={currentWordHint}
-          />} 
+          {gameStatus === "playing" && (
+            <Guess
+              isOwner={isOwner}
+              guessInput={guessInput}
+              setGuessInput={setGuessInput}
+              currentWord={currentWord}
+              currentWordHint={currentWordHint}
+              checkGuessedInput={checkGuessedInput}
+              enableGuessInput={enableGuessInput}
+            />
+          )}
           <div className="flex max-md:flex-col-reverse flex-wrap max-md:items-center items-start gap-4 flex-1 ">
             <div className="flex max-md:flex-row flex-col my-10 gap-6 max-md:w-full w-3/12">
               <Scoreboard
@@ -388,8 +435,8 @@ export default function Room() {
               <Chat
                 chatBoxRef={chatBoxRef}
                 chatMessages={chatMessages}
-                guessInput={guessInput}
-                setGuessInput={setGuessInput}
+                guessInput={chatInput}
+                setGuessInput={setChatInput}
                 gameStatus={gameStatus}
                 currentUserEmail={currentUserEmail}
               />
