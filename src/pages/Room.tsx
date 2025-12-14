@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useEffect, useRef, useState } from "react";
 import Whiteboard from "../components/WhiteBoard";
 import WhiteBoardToolBar from "../components/WhiteBoardToolBar";
@@ -7,6 +8,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { roomApi } from "../api";
 import type { DefaultEventsMap } from "@socket.io/component-emitter";
+import Scoreboard from "../components/Scoreboard";
+import Chat from "../components/Chat";
+import Guess from "../components/Guess";
 
 export type PathType = number[];
 
@@ -21,19 +25,45 @@ export type WhiteBoardEventType = {
   currentY?: number;
 };
 
+export type ScoreEntry = {
+  userId: string;
+  username: string;
+  score: number;
+};
+
+type ChatMessage = {
+  senderId: string;
+  senderName: string;
+  text: string;
+  isCorrectGuess: boolean;
+};
+
 export default function Room() {
   const params = useParams();
   const roomId = params.roomId;
-  // console.log("ROOMID", roomId);
   const [totaMembers, setTotalMembers] = useState(1);
   const [whiteBoardEvents, setWhiteBoardEvents] = useState<
     WhiteBoardEventType[]
   >([]);
-  const [undoWhiteBoardEvents, setUndoWhiteBoardEvents] = useState<
-    WhiteBoardEventType[]
-  >([]);
+  const [gameStatus, setGameStatus] = useState<
+    "idle" | "playing" | "round_end" | "finished"
+  >("idle");
+  const [currentDrawer, setcurrentDrawer] = useState<string>("");
+  const [currentWordHint, setCurrentWordHint] = useState("");
+  const [currentWord, setCurrentWord] = useState("");
+  const [currentTimer, setCurrentTimer] = useState<number>();
+  const [scoreboard, setScoredboard] = useState<ScoreEntry[]>([
+    { userId: "", username: "", score: 0 },
+  ]);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState<ChatMessage>();
+  const [guessInput, setGuessInput] = useState("");
+  const [enableGuessInput,setEnableGuessInput]=useState(true)
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasctxRef = useRef(null);
+  const chatBoxRef = useRef<HTMLDivElement>(null);
 
   const ToolType = {
     PENCIL: "pencil",
@@ -47,6 +77,16 @@ export default function Room() {
   const [socket, setSocket] = useState<Socket | null | undefined>();
   const navigate = useNavigate();
 
+   const getDataFromLocalStorage = localStorage.getItem("data") || "";
+    const parsedData = JSON.parse(getDataFromLocalStorage);
+    if (!parsedData && !parsedData.user.username) {
+      throw new Error(
+        "Error occured in parsing data from localStorage..try login again"
+      );
+    }
+
+  console.log("CANVAS", canvasRef.current, canvasctxRef.current);
+
   useEffect(() => {
     let newSocket:
       | Socket<DefaultEventsMap, DefaultEventsMap>
@@ -55,6 +95,7 @@ export default function Room() {
 
     let user: string;
     let useremail: string;
+   
     async function initializeRoom() {
       if (!roomId) {
         return;
@@ -62,15 +103,10 @@ export default function Room() {
 
       try {
         const room = await checkIfRoomExits(roomId);
-        const getDataFromLocalStorage = localStorage.getItem("data") || "";
-        const parsedData = JSON.parse(getDataFromLocalStorage);
-        if (!parsedData && !parsedData.user.username) {
-          throw new Error(
-            "Error occured in parsing data from localStorage..try login again"
-          );
-        }
+
         user = parsedData.user.username;
         useremail = parsedData.user.email;
+        setcurrentDrawer(user);
 
         if (!room) {
           toast.error("Error occured in joining room");
@@ -78,9 +114,11 @@ export default function Room() {
         }
 
         const roomData = room.data[0];
-        // console.log("ROOM", roomData);
+        console.log("ROOM", roomData);
         // console.log("JOINED USERS", roomData?.joinedUsers);
         const isUserOwner = roomData.ownerEmailId === useremail;
+        setCurrentUserEmail(roomData.ownerEmailId);
+        setScoredboard(roomData?.scoreBoard || []);
         setIsOwner(isUserOwner);
         newSocket = getAuthenticatedSocket();
 
@@ -154,6 +192,7 @@ export default function Room() {
     socket.on("userJoined", (payload) => {
       // console.log(`New user joined: ${payload.username}`);
       toast.success(` ${payload.message}`);
+      fetchScoreBoard();
       setTotalMembers(payload.count);
     });
 
@@ -196,7 +235,7 @@ export default function Room() {
             const newPath = [...(event.path ?? []), payload.point];
             return {
               ...event,
-              path:newPath,
+              path: newPath,
             };
           } else if (payload.type === "shape_event") {
             return {
@@ -204,8 +243,7 @@ export default function Room() {
               currentX: payload.currentX,
               currentY: payload.currentY,
             };
-          }
-          else{
+          } else {
             return event;
           }
         });
@@ -223,6 +261,45 @@ export default function Room() {
       });
     });
 
+    socket.on("receiveStartGameForDrawer", (payload) => {
+      console.log("Recieved receiveStartGameForDrawer event", payload);
+      setGameStatus(payload.mode);
+      setCurrentWord(payload.word);
+      setCurrentWordHint(payload.maskedWord);
+      setCurrentTimer(30);
+    });
+
+    socket.on("receiveStartGame", (payload) => {
+      console.log("Recieved receiveStartGame event", payload);
+      handleClearCanvas();
+      setGameStatus(payload.mode);
+      setCurrentWordHint(payload.maskedWord);
+      setEnableGuessInput(true);
+      setGuessInput("");
+      setCurrentTimer(30);
+    });
+
+    socket.on("wrongGuess",(payload)=>{
+      toast.error(payload.message);
+    })
+
+    socket.on("correctGuess", (payload)=>{
+      toast.info(payload.message);
+      setEnableGuessInput(false);
+
+    })
+
+    socket.on("updateScoreBoard", (payload)=>{
+      if(payload?.scoreBoard){
+        setScoredboard(payload.scoreBoard)
+      }
+    })
+
+    socket.on("endGame" , (payload)=>{
+      setGameStatus(payload.mode);
+      toast.info(payload?.message);
+    })
+
     socket.on("roomError", (payload) => {
       console.log(`ERROR: ${payload.message}`);
       toast.error(payload.message);
@@ -239,6 +316,12 @@ export default function Room() {
       socket.off("userLeft");
       socket.off("receiveDrawingUpdate");
       socket.off("receiveDrawingEvent");
+      socket.off("receiveStartGame");
+      socket.off("receiveStartGameForDrawer");
+      socket.off("correctGuess");
+      socket.off("wrongGuess");
+      socket.off("updateScoreBoard");
+      socket.off("endGame");
       socket.off("roomError");
     };
   }, [socket]);
@@ -252,53 +335,61 @@ export default function Room() {
   }
 
   const handleClearCanvas = () => {
+    console.log("CLEAR CANVAS EVENT CALLED");
     const canv = canvasRef.current;
-    const ctx = canv?.getContext("2d");
+    const ctx = canvasctxRef.current as
+      | CanvasRenderingContext2D
+      | null
+      | undefined;
+
+    if (!canv || !ctx) {
+      console.error("Canvas or context is not initialized.");
+      return;
+    }
+
     ctx.fillStyle = "white";
-    canvasctxRef.current.clearRect(
+
+    const scale = window.devicePixelRatio || 1; // FIX 2: Clear using logical (unscaled) dimensions
+
+    ctx.clearRect(
       0,
       0,
-      canvasRef.current?.width,
-      canvasRef.current?.height
+      canv.width / scale, // Logical Width
+      canv.height / scale // Logical Height
     );
+
     setWhiteBoardEvents([]);
   };
 
-  // console.log("UNDO ARRAY", undoWhiteBoardEvents);
-
-  const handleUndoEvents = () => {
-    // console.log("Undo clicked");
-    if (whiteBoardEvents.length > 0 && undoWhiteBoardEvents.length < 5) {
-      const lastBoardEvent = whiteBoardEvents[whiteBoardEvents.length - 1];
-      undoWhiteBoardEvents.push(lastBoardEvent);
-      if (whiteBoardEvents.length == 1) {
-        handleClearCanvas();
-      } else {
-        setWhiteBoardEvents((prev) => {
-          const lastBoardEventIndex = prev.length - 1;
-          return prev.filter((boardevent, index) => {
-            if (index !== lastBoardEventIndex) {
-              return boardevent;
-            }
-          });
-        });
-      }
+  const handleLeaveRoom = () => {
+    if (socket && socket.connected) {
+      socket.emit("leaveRoom", { roomId: roomId }, (response: any) => {
+        console.log("leaveRoom response:", response);
+      });
     }
   };
 
-  const handleRedoEvents = () => {
-    // console.log("Redo clicked");
-    if (undoWhiteBoardEvents.length > 0) {
-      const lastundoevent =
-        undoWhiteBoardEvents[undoWhiteBoardEvents.length - 1];
-      setWhiteBoardEvents((prev) => {
-        return [...prev, lastundoevent];
-      });
+  const handleStartGame = () => {
+    if (socket && socket.connected) {
+      socket.emit("startGame", { roomId: roomId, user: currentDrawer });
+    }
+  };
 
-      setUndoWhiteBoardEvents((prev) => {
-        const updatedUndoWhiteBoardEvents = [...prev];
-        updatedUndoWhiteBoardEvents.pop();
-        return updatedUndoWhiteBoardEvents;
+  const fetchScoreBoard = async () => {
+    try {
+      const response = await roomApi.fetchRoomScoreBoard({ roomId: roomId! });
+      setScoredboard(response.data.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const checkGuessedInput = () => {
+    if (socket && socket.connected) {
+      socket.emit("checkWord", {
+        roomId,
+        userId: parsedData.user.email,
+        word:guessInput,
       });
     }
   };
@@ -306,8 +397,7 @@ export default function Room() {
   return (
     <>
       <div className="bg-stone-100">
-        <h1 className="font-bold text-4xl px-20 pb-4 py-6">Your Whiteboard</h1>
-        <p className="font-bold text-4xl px-20 pb-4 py-6">
+        <p className="font-bold text-lg px-20 pb-2 py-2 text-gray-700">
           Current users {totaMembers}
         </p>
         <div className="px-20">
@@ -318,22 +408,56 @@ export default function Room() {
               color={color}
               setColor={setColor}
               onClearCanvasClick={handleClearCanvas}
-              onUndoClick={handleUndoEvents}
-              onRedoClick={handleRedoEvents}
+              onLeaveRoom={handleLeaveRoom}
+              gameStatus={gameStatus}
+              setGameStatus={setGameStatus}
             />
           )}
-          <Whiteboard
-            whiteBoardEvents={whiteBoardEvents}
-            setUndoWhiteBoardEvents={setUndoWhiteBoardEvents}
-            setWhiteBoardEvents={setWhiteBoardEvents}
-            socket={socket}
-            canvasRef={canvasRef}
-            canvasctxRef={canvasctxRef}
-            tool={tool}
-            color={color}
-            roomId={roomId}
-            isOwner={isOwner}
-          />
+
+          {gameStatus === "playing" && (
+            <Guess
+              isOwner={isOwner}
+              guessInput={guessInput}
+              setGuessInput={setGuessInput}
+              currentWord={currentWord}
+              currentWordHint={currentWordHint}
+              checkGuessedInput={checkGuessedInput}
+              enableGuessInput={enableGuessInput}
+            />
+          )}
+          <div className="flex max-md:flex-col-reverse flex-wrap max-md:items-center items-start gap-4 flex-1 ">
+            <div className="flex max-md:flex-row flex-col my-10 gap-6 max-md:w-full w-3/12">
+              <Scoreboard
+                scoreBoard={scoreboard}
+                currentDrawer={currentDrawer}
+                currentUserEmail={currentUserEmail}
+              />
+              <Chat
+                chatBoxRef={chatBoxRef}
+                chatMessages={chatMessages}
+                guessInput={chatInput}
+                setGuessInput={setChatInput}
+                gameStatus={gameStatus}
+                currentUserEmail={currentUserEmail}
+              />
+            </div>
+            <Whiteboard
+              whiteBoardEvents={whiteBoardEvents}
+              setWhiteBoardEvents={setWhiteBoardEvents}
+              socket={socket}
+              canvasRef={canvasRef}
+              canvasctxRef={canvasctxRef}
+              tool={tool}
+              color={color}
+              roomId={roomId}
+              isOwner={isOwner}
+              gameStatus={gameStatus}
+              setGameStatus={setGameStatus}
+              handleStartGame={handleStartGame}
+              currentWord={currentWord}
+              currentWordHint={currentWordHint}
+            />
+          </div>
         </div>
       </div>
     </>

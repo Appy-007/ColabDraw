@@ -62,7 +62,7 @@ export default function JoinRoom({ isOpen, setShowModal }: FormPropTypes) {
     };
   return (
     <>
-      <Modal isOpen={isOpen} onClose={() => setShowModal(-1)}>
+      <Modal isOpen={isOpen} onClose={() => setShowModal(-1)} targetRoot="modal-root">
         <div>
           <h2 className="text-2xl font-bold mb-4 text-sky-400 ">Join Room</h2>
           <form className="flex flex-col gap-4" action="" onSubmit={handleSubmit}>
