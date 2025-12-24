@@ -27,24 +27,24 @@ export default function Login({ isOpen, setShowModal }: FormPropTypes) {
         password: data.password.toString().trim(),
       };
       const response = await authApi.login(apiData);
-      // console.log(response);
       if (response?.data?.data)
         localStorage.setItem("data", JSON.stringify(response.data.data));
-
       toast.success(response.data.message);
       navigate("/home");
     } catch (error) {
       const axiosError = error as AxiosError;
       console.log(axiosError);
-      const message =
-        axiosError?.response?.data?.message ||
-        `An error occurred during login.`;
+      const message = `An error occurred during login.`;
       toast.error(message);
     }
   };
   return (
     <>
-      <Modal isOpen={isOpen} onClose={() => setShowModal(-1)} targetRoot="modal-root">
+      <Modal
+        isOpen={isOpen}
+        onClose={() => setShowModal(-1)}
+        targetRoot="modal-root"
+      >
         <div>
           <form
             ref={formRef}

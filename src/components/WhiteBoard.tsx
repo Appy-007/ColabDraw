@@ -5,6 +5,8 @@ import type { WhiteBoardEventType } from "../pages/Room";
 import type { Socket } from "socket.io-client";
 import type { DefaultEventsMap } from "@socket.io/component-emitter";
 import { useNavigate } from "react-router-dom";
+import { GameStatus } from "../types.";
+import { ToolType } from "../types.";
 
 export type Point = [number, number];
 
@@ -21,12 +23,8 @@ type WhiteBoardPropsType = {
   roomId: string | undefined;
   isOwner: boolean;
   gameStatus?: string;
-  setGameStatus?: React.Dispatch<
-    React.SetStateAction<"playing" | "idle" | "round_end" | "finished">
-  >;
+  setGameStatus?: React.Dispatch<React.SetStateAction<string>>;
   handleStartGame: () => void;
-  currentWord?: string;
-  currentWordHint?: string;
 };
 
 export default function Whiteboard({
@@ -41,8 +39,6 @@ export default function Whiteboard({
   isOwner,
   gameStatus,
   handleStartGame,
-  currentWord,
-  currentWordHint,
 }: WhiteBoardPropsType) {
   const [enableDrawing, setEnableDrawing] = useState<boolean>(false);
 
@@ -72,13 +68,11 @@ export default function Whiteboard({
     if (socket && socket.connected) {
       console.log("SEND EVENT FROM CLIENT", boardEvent);
       socket.emit("sendDrawingEvent", { roomId, event: boardEvent });
-      console.log("Executed");
     }
   };
 
   useLayoutEffect(() => {
     const canvasElement = canvasRef.current;
-    console.log("UseLayout ", canvasElement);
     if (canvasElement) {
       const canvas = rough.canvas(canvasElement);
       console.log("UseLayout called");
@@ -95,22 +89,22 @@ export default function Whiteboard({
         whiteBoardEvents.forEach((boardEvent: WhiteBoardEventType) => {
           const strokeOptions = {
             strokeWidth: 2.0,
-            stroke: boardEvent.stroke,
+            stroke: boardEvent?.stroke,
             roughness: 0,
           };
-          if (boardEvent.type === "pencil") {
-            canvas.linearPath(boardEvent.path as Point[], strokeOptions);
-          } else if (boardEvent.type === "line") {
+          if (boardEvent.type === ToolType.PENCIL) {
+            canvas.linearPath(boardEvent?.path as Point[], strokeOptions);
+          } else if (boardEvent.type === ToolType.LINE) {
             canvas.line(
-              boardEvent.offsetX,
-              boardEvent.offsetY,
+              boardEvent?.offsetX,
+              boardEvent?.offsetY,
               boardEvent.currentX!,
               boardEvent.currentY!,
               strokeOptions
             );
           } else {
-            const startX = boardEvent.offsetX;
-            const startY = boardEvent.offsetY;
+            const startX = boardEvent?.offsetX;
+            const startY = boardEvent?.offsetY;
             const endX = boardEvent.currentX!;
             const endY = boardEvent.currentY!;
 
@@ -129,24 +123,23 @@ export default function Whiteboard({
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!isOwner) return;
     const { offsetX, offsetY } = e.nativeEvent;
-    // console.log("MOUSE DOWN", offsetX, offsetY);
     const id =
       (crypto as any).randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
     setEnableDrawing(true);
     let newBoardEvent: WhiteBoardEventType;
-    if (tool == "pencil") {
+    if (tool == ToolType.PENCIL) {
       newBoardEvent = {
         id,
-        type: "pencil",
+        type: ToolType.PENCIL,
         offsetX: offsetX,
         offsetY: offsetY,
         path: [[offsetX, offsetY]],
         stroke: color,
       };
-    } else if (tool == "line") {
+    } else if (tool == ToolType.LINE) {
       newBoardEvent = {
         id,
-        type: "line",
+        type: ToolType.LINE,
         offsetX: offsetX,
         offsetY: offsetY,
         stroke: color,
@@ -156,7 +149,7 @@ export default function Whiteboard({
     } else {
       newBoardEvent = {
         id,
-        type: "rectangle",
+        type: ToolType.RECTANGLE,
         offsetX: offsetX,
         offsetY: offsetY,
         stroke: color,
@@ -165,8 +158,6 @@ export default function Whiteboard({
       };
     }
     currentEventIdRef.current = id;
-
-    // 1. Send the initial event creation
     sendBoardEventToSocket(newBoardEvent);
 
     setWhiteBoardEvents((prev: WhiteBoardEventType[]) => [
@@ -174,43 +165,6 @@ export default function Whiteboard({
       newBoardEvent,
     ]);
 
-    //   if (tool === "pencil") {
-    //     return [
-    //       ...prev,
-    //       {
-    //         type: tool,
-    //         offsetX: offsetX,
-    //         offsetY: offsetY,
-    //         path: [[offsetX, offsetY]],
-    //         stroke: color,
-    //       },
-    //     ];
-    //   } else if (tool == "rectangle") {
-    //     return [
-    //       ...prev,
-    //       {
-    //         type: tool,
-    //         offsetX: offsetX,
-    //         offsetY: offsetY,
-    //         stroke: color,
-    //         currentX: offsetX,
-    //         currentY: offsetY,
-    //       },
-    //     ];
-    //   } else {
-    //     return [
-    //       ...prev,
-    //       {
-    //         type: tool,
-    //         offsetX: offsetX,
-    //         offsetY: offsetY,
-    //         stroke: color,
-    //         currentX: offsetX,
-    //         currentY: offsetY,
-    //       },
-    //     ];
-    //   }
-    // });
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -225,10 +179,9 @@ export default function Whiteboard({
       if (idx === -1) return prevWhiteBoardEvents;
 
       const ev = prevWhiteBoardEvents[idx];
-      if (ev.type === "pencil") {
+      if (ev.type === ToolType.PENCIL) {
         const updatedPath = [...(ev.path ?? []), [offsetX, offsetY]];
         const updatedEvent = { ...ev, path: updatedPath };
-        // send update to server
         if (isOwner && socket && socket.connected) {
           socket.emit("sendDrawingUpdate", {
             roomId,
@@ -267,8 +220,8 @@ export default function Whiteboard({
 
   return (
     <>
-      {gameStatus != "playing" ? (
-        gameStatus === "finished" ? (
+      {gameStatus != GameStatus.PLAYING ? (
+        gameStatus === GameStatus.FINISHED ? (
           <div
             className="max-md:w-full w-8/12 my-10 border max-md:h-2/5 h-screen 
                 flex items-center justify-center  
@@ -276,9 +229,18 @@ export default function Whiteboard({
                   rounded-xl shadow-lg"
           >
             <div className="flex-col gap-10 text-center">
-              <p className="text-2xl font-bold text-green-500">Game ended !! </p>
-              <p className="text-sm">Browse back to the home page to start a new game</p>
-              <button className="rounded-lg cursor-pointer bg-blue-600 p-2 mt-5 text-white" onClick={() => navigate("/home")}>Go to Home</button>
+              <p className="text-2xl font-bold text-green-500">
+                Game ended !!{" "}
+              </p>
+              <p className="text-sm">
+                Browse back to the home page to start a new game
+              </p>
+              <button
+                className="rounded-lg cursor-pointer bg-blue-600 p-2 mt-5 text-white"
+                onClick={() => navigate("/home")}
+              >
+                Go to Home
+              </button>
             </div>
           </div>
         ) : (

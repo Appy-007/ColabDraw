@@ -28,11 +28,9 @@ const getAuthenticatedSocket = () => {
   }
 
   socket = io(BACKEND_URL, {
-    // Send the JWT in the handshake headers (best practice)
     auth: {
-    token: `Bearer ${token}`,  // or just token
+    token: `Bearer ${token}`,
     },
-    // Optional: Retry connection settings
     reconnectionAttempts: 5,
     transports: ["websocket"],
   });
@@ -43,7 +41,6 @@ const getAuthenticatedSocket = () => {
       toast.error("Unauthorized. Please log in again.");
       localStorage.removeItem("data");
       window.location.href = "/";
-      // Handle unauthorized connection (e.g., clear token and redirect)
     }
   });
 

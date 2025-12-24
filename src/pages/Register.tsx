@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import RegisterForm from "../components/RegsiterForm";
 import Login from "../components/Login";
 import { useNavigate } from "react-router-dom";
+import { authApi } from "../api";
+import { toast } from "react-toastify";
 
 export default function Register() {
   const [isModalOpen, setIsModalOpen] = useState<number>(-1);
@@ -12,20 +14,28 @@ export default function Register() {
 
   const navigate = useNavigate();
   useEffect(() => {
+    const validateToken = async () => {
+      try {
+        await authApi.verify();
+        navigate("/home");
+      } catch (error) {
+        console.log(error);
+        localStorage.removeItem("data");
+        toast.error("Token expired ...please login again")       
+      }
+    };
     const getDataFromLocalStorage = localStorage.getItem("data");
     if (getDataFromLocalStorage) {
       try {
         const parsedData = JSON.parse(getDataFromLocalStorage);
         if (parsedData && parsedData.user) {
-          console.log("User already logged in. Redirecting to /home.");
-          navigate("/home", { replace: true });
+          validateToken();
         }
       } catch (error) {
         console.error("Error parsing local storage data:", error);
       }
     }
   }, [navigate]);
-
 
   const handleModal = (num: number) => setIsModalOpen(num);
   return (

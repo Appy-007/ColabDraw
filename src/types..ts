@@ -5,7 +5,7 @@ export interface RegisterDataType{
 }
 
 export interface LoginDataType {
-    name:string,
+    email:string,
     password:string,
 }
 
@@ -17,3 +17,16 @@ export interface CreateRoomType {
 export interface CheckRoomIdType {
     roomId:string
 }
+
+export const ToolType = {
+  PENCIL: "pencil",
+  LINE: "line",
+  RECTANGLE: "rectangle",
+};
+
+export const GameStatus = {
+  IDLE: "idle",
+  PLAYING: "playing",
+  ROUND_END: "round_end",
+  FINISHED: "finished",
+};
