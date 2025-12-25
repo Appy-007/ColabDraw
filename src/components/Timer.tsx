@@ -5,12 +5,13 @@ export type TimerProps = {
   isOwner: boolean;
   gameStatus: string;
   setGameStatus: any;
-  onClearCanvasClick:()=>void;
-  onRoundEnd:()=>void;
+  onClearCanvasClick: () => void;
+  onRoundEnd: () => void;
 };
 export default function Timer(props: TimerProps) {
-  const {isOwner, gameStatus, setGameStatus,onClearCanvasClick,onRoundEnd } = props;
-  const [roundTimer, setRoundTimer] = useState(20);
+  const { isOwner, gameStatus, setGameStatus, onClearCanvasClick, onRoundEnd } =
+    props;
+  const [roundTimer, setRoundTimer] = useState(40);
 
   const timerIdRef = useRef<number>(null);
   useEffect(() => {
@@ -34,8 +35,8 @@ export default function Timer(props: TimerProps) {
       if (timerIdRef.current) {
         window.clearInterval(timerIdRef.current);
       }
-      if(isOwner){
-        onRoundEnd()
+      if (isOwner) {
+        onRoundEnd();
       }
       onClearCanvasClick();
       setGameStatus("round_end");

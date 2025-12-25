@@ -14,7 +14,7 @@ const Modal = ({ isOpen, onClose,targetRoot='modal-root', children }: ModalPropT
 
   return ReactDOM.createPortal(
     <div
-      className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-md z-50"
+      className="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-md z-50"
       onClick={onClose} // close on backdrop click
     >
       <div

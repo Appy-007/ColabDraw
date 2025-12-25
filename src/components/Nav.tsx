@@ -1,20 +1,20 @@
 import { toast } from "react-toastify";
 import Logo from "../assets/Logo.png";
 import { CiLogout } from "react-icons/ci";
-import { useLocation } from "react-router-dom";
+import { matchPath, useLocation } from "react-router-dom";
 
 export default function Nav() {
 
   const location = useLocation();
 
-  const isRouteRegister = location.pathname === "/";
+  const isRouteRegister = location.pathname === "/" || !!matchPath({ path: "/room/:roomId" }, location.pathname);;
 
   const handleLogout = () => {
-    const data = localStorage.getItem("data");
+    const data = localStorage.getItem("scribbleDraw-data");
     if (!data) {
       return;
     }
-    localStorage.removeItem("data");
+    localStorage.removeItem("scribbleDraw-data");
     toast.success("User Logged out successfully !");
     window.location.href = "/";
   };

@@ -66,7 +66,6 @@ export default function Whiteboard({
 
   const sendBoardEventToSocket = (boardEvent: WhiteBoardEventType) => {
     if (socket && socket.connected) {
-      console.log("SEND EVENT FROM CLIENT", boardEvent);
       socket.emit("sendDrawingEvent", { roomId, event: boardEvent });
     }
   };

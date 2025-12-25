@@ -3,6 +3,7 @@ import Modal from "./Modal";
 import { toast } from "react-toastify";
 import { roomApi } from "../api";
 import { useNavigate } from "react-router-dom";
+import type { AxiosError } from "axios";
 
 export type FormPropTypes = {
   isOpen: boolean;
@@ -15,12 +16,12 @@ type JoinRoomType = {
 };
 
 export default function JoinRoom({ isOpen, setShowModal }: FormPropTypes) {
-  const [joinRoom,setJoinRoom]=useState<JoinRoomType>({
-    name:"",
-    roomId:""
-  })
+  const [joinRoom, setJoinRoom] = useState<JoinRoomType>({
+    name: "",
+    roomId: "",
+  });
 
-  const navigate=useNavigate()
+  const navigate = useNavigate();
 
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -35,35 +36,44 @@ export default function JoinRoom({ isOpen, setShowModal }: FormPropTypes) {
     });
   };
 
-  const handleSubmit = async(event: React.ChangeEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      if (!joinRoom.name || !joinRoom.roomId) {
-        toast.error("Please enter all the fields");
-        return;
-      }
-      const roomData = {
-        name: joinRoom.name.trim(),
-        roomId: joinRoom.roomId.trim(),
-      };
-  
-      try {
-      const resp=await roomApi.joinRoom(roomData)
-      if(!resp){
-        toast.error('Error occured in creating room')
-        throw new Error('Error occured in creating room')
-      }
-      const roomId=resp.data.data.roomId
-      navigate(`/room/${roomId}`)
-      } catch (error) {
-        console.log(error) 
-      } 
+  const handleSubmit = async (event: React.ChangeEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!joinRoom.name || !joinRoom.roomId) {
+      toast.error("Please enter all the fields");
+      return;
+    }
+    const roomData = {
+      name: joinRoom.name.trim(),
+      roomId: joinRoom.roomId.trim(),
     };
+
+    try {
+      const resp = await roomApi.joinRoom(roomData);
+      if (!resp) {
+        toast.error("Error occured in joining room");
+        throw new Error("Error occured in joining room");
+      }
+      const roomId = resp?.data?.data?.roomId;
+      if (roomId) navigate(`/room/${roomId}`);
+    } catch (error) {
+      console.log("Error in join Room",error);
+      toast.error(error?.response?.data?.message || "Error occured in joining room" );
+    }
+  };
   return (
     <>
-      <Modal isOpen={isOpen} onClose={() => setShowModal(-1)} targetRoot="modal-root">
+      <Modal
+        isOpen={isOpen}
+        onClose={() => setShowModal(-1)}
+        targetRoot="modal-root"
+      >
         <div>
           <h2 className="text-2xl font-bold mb-4 text-sky-400 ">Join Room</h2>
-          <form className="flex flex-col gap-4" action="" onSubmit={handleSubmit}>
+          <form
+            className="flex flex-col gap-4"
+            action=""
+            onSubmit={handleSubmit}
+          >
             <input
               className=" outline-none border border-gray-400 px-2 py-1 rounded-md"
               type="text"
@@ -71,7 +81,7 @@ export default function JoinRoom({ isOpen, setShowModal }: FormPropTypes) {
               name="name"
               id="name"
               value={joinRoom.name}
-              onChange={(e)=>handleChange(e,"name")}
+              onChange={(e) => handleChange(e, "name")}
             />
 
             <input
@@ -80,11 +90,14 @@ export default function JoinRoom({ isOpen, setShowModal }: FormPropTypes) {
               placeholder="Enter room code"
               name="roomId"
               id="roomId"
-               value={joinRoom.roomId}
-              onChange={(e)=>handleChange(e,"roomId")}
+              value={joinRoom.roomId}
+              onChange={(e) => handleChange(e, "roomId")}
             />
 
-            <button  type="submit" className="cursor-pointer text-white bg-sky-400 font-bold py-2 px-4 rounded">
+            <button
+              type="submit"
+              className="cursor-pointer text-white bg-sky-400 font-bold py-2 px-4 rounded"
+            >
               Join Room
             </button>
           </form>

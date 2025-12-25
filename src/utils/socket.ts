@@ -10,10 +10,10 @@ const getAuthenticatedSocket = () => {
   if (socket && socket.connected) {
     return socket;
   }
-  const localStorageData = localStorage.getItem("data");
+  const localStorageData = localStorage.getItem("scribbleDraw-data");
 
   if (!localStorageData) {
-    toast.error("Authentication data not found.");
+    toast.error("Authentication data not found.Try re-login again");
     window.location.href = "/";
     return null;
   }
@@ -21,7 +21,7 @@ const getAuthenticatedSocket = () => {
   const token = parsedData?.token;
 
   if (!token) {
-    console.error("Authentication token not found.");
+    console.error("Authentication token not found.Try re-login again");
     toast.error("Authentication token not found.");
     window.location.href = "/";
     return null;
@@ -39,7 +39,7 @@ const getAuthenticatedSocket = () => {
     console.error("Socket Connection Failed:", err.message);
     if (err.message === "Unauthorized") {
       toast.error("Unauthorized. Please log in again.");
-      localStorage.removeItem("data");
+      localStorage.removeItem("scribbleDraw-data");
       window.location.href = "/";
     }
   });

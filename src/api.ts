@@ -1,8 +1,7 @@
-
 import axios from 'axios';
 import type { CheckRoomIdType, CreateRoomType, LoginDataType, RegisterDataType } from './types.';
 
-// 1. Create a base Axios instance
+//base Axios instance
 const api = axios.create({
   baseURL: import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000',
   headers: {
@@ -10,25 +9,22 @@ const api = axios.create({
   },
 });
 
-// 2. Add an interceptor to include the JWT token in future requests (for authenticated routes)
+//interceptor to include the JWT token in future requests (for authenticated routes)
 api.interceptors.request.use(config => {
-  const data = localStorage.getItem('data');
+  const data = localStorage.getItem('scribbleDraw-data');
   if(data){
     const parsedData=JSON.parse(data)
-    // console.log('DATA',parsedData)
     if (parsedData?.token) {
     config.headers.Authorization = `Bearer ${parsedData.token}`;
   }
   }
-
-  // console.log("CONFIG",config)
   
   return config;
 }, error => {
   return Promise.reject(error);
 });
 
-// 3. Define and export specific API functions
+//API functions
 export const authApi = {
   register: (data:RegisterDataType) => api.post('/auth/register', data), 
   
@@ -47,4 +43,4 @@ export const roomApi={
   fetchRoomScoreBoard : (data:CheckRoomIdType)=> api.post('/room/fetchRoomScoreBoard',data),
 }
 
-export default api; // Export the base instance for other modules
+export default api;

@@ -28,14 +28,20 @@ export default function RegisterForm({ isOpen, setShowModal }: FormPropTypes) {
         password: data.password.toString().trim(),
       };
       const response = await authApi.register(apiData);
-      if (response?.data?.data)
-        localStorage.setItem("data", JSON.stringify(response.data.data));
-      toast.success("User registered successfully");
-      navigate("/home");
+      if (response?.data?.data) {
+        localStorage.setItem(
+          "scribbleDraw-data",
+          JSON.stringify(response.data.data)
+        );
+        toast.success(response.data?.message || "User registered successfully");
+        navigate("/home");
+      } else {
+        toast.error("Sorry,unable to register.Try Again");
+      }
     } catch (error) {
       const axiosError = error as AxiosError;
       console.log(axiosError);
-      const message = `An error occurred during register.`;
+      const message = `An error occurred during register`;
       toast.error(message);
     }
   };

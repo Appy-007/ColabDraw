@@ -78,10 +78,11 @@ export default function CreateRoom({ isOpen, setShowModal }: FormPropTypes) {
         toast.error("Error occured in creating room");
         throw new Error("Error occured in creating room");
       }
-      const roomId = resp.data.data.roomId;
-      navigate(`/room/${roomId}`);
+      const roomId = resp?.data?.data?.roomId;
+      if (roomId) navigate(`/room/${roomId}`);
     } catch (error) {
-      console.log(error);
+      console.log("Error in create Room",error);
+      toast.error(error?.response?.data?.message || "Error occured in creating room")
     }
   };
   return (

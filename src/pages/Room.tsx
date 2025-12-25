@@ -12,6 +12,7 @@ import Scoreboard from "../components/Scoreboard";
 import Chat from "../components/Chat";
 import Guess from "../components/Guess";
 import { ToolType, GameStatus } from "../types.";
+import Timer from "../components/Timer";
 
 export type PathType = number[];
 
@@ -39,45 +40,67 @@ type ChatMessage = {
   isCorrectGuess: boolean;
 };
 
-const TIMER_DUR=50
+const TIMER_DUR = 50;
 
 export default function Room() {
   const params = useParams();
   const roomId = params.roomId;
+
   const [whiteBoardEvents, setWhiteBoardEvents] = useState<
     WhiteBoardEventType[]
   >([]);
   const [gameStatus, setGameStatus] = useState<string>(GameStatus.IDLE);
-  const [currentDrawer, setcurrentDrawer] = useState<string>("");
   const [currentWordHint, setCurrentWordHint] = useState("");
   const [currentWord, setCurrentWord] = useState("");
   const [currentTimer, setCurrentTimer] = useState<number>();
-  const [scoreboard, setScoredboard] = useState<ScoreEntry[]>([{ userId: "", username: "", score: 0 }]);
+  const [scoreboard, setScoredboard] = useState<ScoreEntry[]>([
+    { userId: "", username: "", score: 0 },
+  ]);
+
+  const [currentUser, setCurrentUser] = useState<string>("");
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
+
+  const [isOwner, setIsOwner] = useState<boolean>(false);
+  const [currentOwnerEmail, setCurrentOwnerEmail] = useState<string>("");
+
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState<ChatMessage>();
+
   const [guessInput, setGuessInput] = useState("");
   const [enableGuessInput, setEnableGuessInput] = useState(true);
+
   const [tool, setTool] = useState<string>(ToolType.PENCIL);
   const [color, setColor] = useState<string>("#000000");
-  const [isOwner, setIsOwner] = useState<boolean>(false);
   const [socket, setSocket] = useState<Socket | null | undefined>();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasctxRef = useRef(null);
   const chatBoxRef = useRef<HTMLDivElement>(null);
+  const localStorageRef = useRef(null);
 
   const navigate = useNavigate();
 
-  const getDataFromLocalStorage = localStorage.getItem("data") || "";
-  const parsedData = JSON.parse(getDataFromLocalStorage);
-  if (!parsedData && !parsedData.user.username) {
-    throw new Error(
-      "Error occured in parsing data from localStorage..try login again"
-    );
-  }
-
   console.log("CANVAS", canvasRef.current, canvasctxRef.current);
+
+  useEffect(() => {
+    const getDataFromLocalStorage = localStorage.getItem("scribbleDraw-data");
+    try {
+      if (!getDataFromLocalStorage) {
+        throw new Error("no data found");
+      }
+      const parsedData = JSON.parse(getDataFromLocalStorage);
+      if (!parsedData?.user?.username) {
+        throw new Error("invalid data structure in localStorage");
+      }
+
+      console.log("User verified:", parsedData.user.username);
+      localStorageRef.current = parsedData;
+    } catch (error) {
+      toast.error("Failed to fetch data from localStorage...try relogin");
+      console.error("storage Error:", error?.message);
+      navigate("/home");
+    }
+  }, [navigate]);
 
   useEffect(() => {
     let newSocket:
@@ -95,20 +118,21 @@ export default function Room() {
 
       try {
         const room = await checkIfRoomExits(roomId);
-        user = parsedData.user.username;
-        useremail = parsedData.user.email;
-        setcurrentDrawer(user);
+        user = localStorageRef.current?.user?.username;
+        useremail = localStorageRef.current?.user?.email;
+        setCurrentUser(user);
+        setCurrentUserEmail(useremail);
 
         if (!room) {
           toast.error("Error occured in joining room");
           throw new Error("Error occured in joining room");
         }
 
-        const roomData = room.data[0];
+        const roomData = room.data;
         const isUserOwner = roomData.ownerEmailId === useremail;
-        setCurrentUserEmail(roomData.ownerEmailId);
         setScoredboard(roomData?.scoreBoard || []);
         setIsOwner(isUserOwner);
+        setCurrentOwnerEmail(roomData.ownerEmailId);
         newSocket = getAuthenticatedSocket();
 
         if (!newSocket) throw new Error("Socket not initialized");
@@ -117,14 +141,16 @@ export default function Room() {
           s: Socket<DefaultEventsMap, DefaultEventsMap>,
           user: string
         ) => {
-          if (roomData?.joinedUsers && roomData.joinedUsers.length > 1) {
-            s.emit("joinRoom", { roomId: roomData.roomId, user: user });
-          } else {
+          if (roomData?.joinedUsers && roomData.ownerEmailId === useremail) {
             s.emit("createRoom", { roomId: roomData.roomId });
+          } else {
+            s.emit("joinRoom", { roomId: roomData.roomId, user: user });
           }
         };
         if (newSocket && newSocket.connected) {
-          console.log("Socket already connected. Emitting createRoom/joinRoom...");
+          console.log(
+            "Socket already connected. Emitting createRoom/joinRoom..."
+          );
           emitSocketEvent(newSocket, user);
         } else {
           newSocket.once("connect", () => {
@@ -167,7 +193,6 @@ export default function Room() {
     });
 
     socket.on("roomLeft", (payload) => {
-      // console.log(payload.message);
       toast.success(payload.message);
     });
 
@@ -177,7 +202,6 @@ export default function Room() {
     });
 
     socket.on("userLeft", (payload) => {
-      // console.log("An user left the room", payload);
       toast.success(payload.message);
     });
 
@@ -240,6 +264,10 @@ export default function Room() {
       });
     });
 
+    socket.on("receiveClearCanvas", ()=>{
+      handleClearCanvas();
+    })
+
     socket.on("receiveStartGameForDrawer", (payload) => {
       console.log("Recieved receiveStartGameForDrawer event", payload);
       setGameStatus(payload.mode);
@@ -293,6 +321,7 @@ export default function Room() {
       socket.off("userLeft");
       socket.off("receiveDrawingUpdate");
       socket.off("receiveDrawingEvent");
+      socket.off("receiveClearCanvas");
       socket.off("receiveStartGame");
       socket.off("receiveStartGameForDrawer");
       socket.off("correctGuess");
@@ -312,7 +341,6 @@ export default function Room() {
   }
 
   const handleClearCanvas = () => {
-    console.log("CLEAR CANVAS EVENT CALLED");
     const canv = canvasRef.current;
     const ctx = canvasctxRef.current as
       | CanvasRenderingContext2D
@@ -326,29 +354,28 @@ export default function Room() {
 
     ctx.fillStyle = "white";
 
-    const scale = window.devicePixelRatio || 1; // FIX 2: Clear using logical (unscaled) dimensions
+    const scale = window.devicePixelRatio || 1;
 
-    ctx.clearRect(
-      0,
-      0,
-      canv.width / scale, // Logical Width
-      canv.height / scale // Logical Height
-    );
+    ctx.clearRect(0, 0, canv.width / scale, canv.height / scale);
+
+    if(isOwner){
+      if(socket && socket.connected){
+        socket.emit("clearCanvas",{roomId: roomId})
+      }
+    }
 
     setWhiteBoardEvents([]);
   };
 
   const handleLeaveRoom = () => {
     if (socket && socket.connected) {
-      socket.emit("leaveRoom", { roomId: roomId }, (response: any) => {
-        console.log("leaveRoom response:", response);
-      });
+      socket.emit("leaveRoom", { roomId: roomId });
     }
   };
 
   const handleStartGame = () => {
     if (socket && socket.connected) {
-      socket.emit("startGame", { roomId: roomId, user: currentDrawer });
+      socket.emit("startGame", { roomId: roomId, user: currentUser });
     }
   };
 
@@ -365,7 +392,7 @@ export default function Room() {
     if (socket && socket.connected) {
       socket.emit("checkWord", {
         roomId,
-        userId: parsedData.user.email,
+        userId: localStorageRef.current?.user?.email,
         word: guessInput,
       });
     }
@@ -382,21 +409,29 @@ export default function Room() {
   return (
     <>
       <div className="bg-stone-100">
-        <div className="px-20">
+        <div className="px-20 py-5">
           {isOwner && (
             <WhiteBoardToolBar
-              isOwner={isOwner}
               tool={tool}
               setTool={setTool}
               color={color}
               setColor={setColor}
               onClearCanvasClick={handleClearCanvas}
-              onRoundEnd={handleRoundEnd}
               onLeaveRoom={handleLeaveRoom}
-              gameStatus={gameStatus}
-              setGameStatus={setGameStatus}
             />
           )}
+
+          <div className="flex justify-end pt-2">
+            {gameStatus === GameStatus.PLAYING && (
+              <Timer
+                gameStatus={gameStatus}
+                setGameStatus={setGameStatus}
+                onClearCanvasClick={handleClearCanvas}
+                isOwner={isOwner}
+                onRoundEnd={handleRoundEnd}
+              />
+            )}
+          </div>
 
           {gameStatus === GameStatus.PLAYING && (
             <Guess
@@ -413,8 +448,8 @@ export default function Room() {
             <div className="flex max-md:flex-row flex-col my-10 gap-6 max-md:w-full w-3/12">
               <Scoreboard
                 scoreBoard={scoreboard}
-                currentDrawer={currentDrawer}
                 currentUserEmail={currentUserEmail}
+                currentOwnerEmail={currentOwnerEmail}
               />
               <Chat
                 chatBoxRef={chatBoxRef}

@@ -2,12 +2,12 @@ import type { ScoreEntry } from "../pages/Room";
 
 type ScoreboardProps={
   scoreBoard:ScoreEntry[];
-  currentDrawer:string;
   currentUserEmail:string;
+  currentOwnerEmail:string;
 }
 
 export default function Scoreboard(params:ScoreboardProps) {
-  const { scoreBoard, currentDrawer, currentUserEmail } = params;
+  const { scoreBoard,currentUserEmail ,currentOwnerEmail } = params;
   return (
     <>
       <div className="bg-white p-4 rounded-xl shadow-lg border border-gray-200">
@@ -25,7 +25,7 @@ export default function Scoreboard(params:ScoreboardProps) {
                 }`}
               >
                 <span className="truncate">
-                  {member.username} {member.userId === currentDrawer && "✍️"}
+                  {member.username} {member?.userId === currentOwnerEmail &&  "✍️"}
                 </span>
                 <span className="text-indigo-600 font-extrabold">
                   {member.score}

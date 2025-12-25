@@ -13,6 +13,7 @@ export default function Register() {
   };
 
   const navigate = useNavigate();
+
   useEffect(() => {
     const validateToken = async () => {
       try {
@@ -20,11 +21,11 @@ export default function Register() {
         navigate("/home");
       } catch (error) {
         console.log(error);
-        localStorage.removeItem("data");
+        localStorage.removeItem("scribbleDraw-data");
         toast.error("Token expired ...please login again")       
       }
     };
-    const getDataFromLocalStorage = localStorage.getItem("data");
+    const getDataFromLocalStorage = localStorage.getItem("scribbleDraw-data");
     if (getDataFromLocalStorage) {
       try {
         const parsedData = JSON.parse(getDataFromLocalStorage);
@@ -32,6 +33,7 @@ export default function Register() {
           validateToken();
         }
       } catch (error) {
+        toast.error("Token not found...please register or login again")
         console.error("Error parsing local storage data:", error);
       }
     }
