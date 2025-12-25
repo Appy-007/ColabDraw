@@ -4,6 +4,9 @@ import rough from "roughjs";
 import type { WhiteBoardEventType } from "../pages/Room";
 import type { Socket } from "socket.io-client";
 import type { DefaultEventsMap } from "@socket.io/component-emitter";
+import { useNavigate } from "react-router-dom";
+import { GameStatus } from "../types.";
+import { ToolType } from "../types.";
 
 export type Point = [number, number];
 
@@ -20,12 +23,8 @@ type WhiteBoardPropsType = {
   roomId: string | undefined;
   isOwner: boolean;
   gameStatus?: string;
-  setGameStatus?: React.Dispatch<
-    React.SetStateAction<"playing" | "idle" | "round_end" | "finished">
-  >;
+  setGameStatus?: React.Dispatch<React.SetStateAction<string>>;
   handleStartGame: () => void;
-  currentWord?: string;
-  currentWordHint?: string;
 };
 
 export default function Whiteboard({
@@ -40,15 +39,15 @@ export default function Whiteboard({
   isOwner,
   gameStatus,
   handleStartGame,
-  currentWord,
-  currentWordHint
 }: WhiteBoardPropsType) {
   const [enableDrawing, setEnableDrawing] = useState<boolean>(false);
 
   const currentEventIdRef = useRef<string | null>(null);
 
+  const navigate = useNavigate();
+
   useEffect(() => {
-    console.log("USE EFFECT CALLED")
+    console.log("USE EFFECT CALLED");
     const canv = canvasRef.current;
     if (canv) {
       const rect = canv.getBoundingClientRect();
@@ -61,28 +60,26 @@ export default function Whiteboard({
       const ctx = canv?.getContext("2d");
       ctx?.scale(scale, scale);
       canvasctxRef.current = ctx;
-      console.log("CANVAS CTX",canvasctxRef.current)
+      console.log("CANVAS CTX", canvasctxRef.current);
     }
-  }, [canvasRef, canvasctxRef ,gameStatus]);
+  }, [canvasRef, canvasctxRef, gameStatus]);
 
   const sendBoardEventToSocket = (boardEvent: WhiteBoardEventType) => {
     if (socket && socket.connected) {
       console.log("SEND EVENT FROM CLIENT", boardEvent);
       socket.emit("sendDrawingEvent", { roomId, event: boardEvent });
-      console.log("Executed");
     }
   };
 
   useLayoutEffect(() => {
     const canvasElement = canvasRef.current;
-    console.log("UseLayout ",canvasElement);
     if (canvasElement) {
       const canvas = rough.canvas(canvasElement);
       console.log("UseLayout called");
 
       if (whiteBoardEvents?.length > 0) {
         const scale = window.devicePixelRatio || 1;
-        console.log("CTX REF",canvasctxRef.current)
+        console.log("CTX REF", canvasctxRef.current);
         canvasctxRef.current?.clearRect(
           0,
           0,
@@ -90,20 +87,24 @@ export default function Whiteboard({
           canvasElement.height / scale!
         );
         whiteBoardEvents.forEach((boardEvent: WhiteBoardEventType) => {
-          const strokeOptions = { strokeWidth: 2.0, stroke: boardEvent.stroke, roughness: 0 };
-          if (boardEvent.type === "pencil") {
-            canvas.linearPath(boardEvent.path as Point[], strokeOptions);
-          } else if (boardEvent.type === "line") {
+          const strokeOptions = {
+            strokeWidth: 2.0,
+            stroke: boardEvent?.stroke,
+            roughness: 0,
+          };
+          if (boardEvent.type === ToolType.PENCIL) {
+            canvas.linearPath(boardEvent?.path as Point[], strokeOptions);
+          } else if (boardEvent.type === ToolType.LINE) {
             canvas.line(
-              boardEvent.offsetX,
-              boardEvent.offsetY,
+              boardEvent?.offsetX,
+              boardEvent?.offsetY,
               boardEvent.currentX!,
               boardEvent.currentY!,
               strokeOptions
             );
           } else {
-            const startX = boardEvent.offsetX;
-            const startY = boardEvent.offsetY;
+            const startX = boardEvent?.offsetX;
+            const startY = boardEvent?.offsetY;
             const endX = boardEvent.currentX!;
             const endY = boardEvent.currentY!;
 
@@ -112,13 +113,7 @@ export default function Whiteboard({
             const y = Math.min(startY, endY);
             const width = Math.abs(endX - startX);
             const height = Math.abs(endY - startY);
-            canvas.rectangle(
-              x,
-              y,
-              width,
-              height,
-              strokeOptions
-            );
+            canvas.rectangle(x, y, width, height, strokeOptions);
           }
         });
       }
@@ -126,26 +121,25 @@ export default function Whiteboard({
   }, [whiteBoardEvents, canvasRef, canvasctxRef]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if(! isOwner) return;
+    if (!isOwner) return;
     const { offsetX, offsetY } = e.nativeEvent;
-    // console.log("MOUSE DOWN", offsetX, offsetY);
     const id =
       (crypto as any).randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
     setEnableDrawing(true);
     let newBoardEvent: WhiteBoardEventType;
-    if (tool == "pencil") {
+    if (tool == ToolType.PENCIL) {
       newBoardEvent = {
         id,
-        type: "pencil",
+        type: ToolType.PENCIL,
         offsetX: offsetX,
         offsetY: offsetY,
         path: [[offsetX, offsetY]],
         stroke: color,
       };
-    } else if (tool == "line") {
+    } else if (tool == ToolType.LINE) {
       newBoardEvent = {
         id,
-        type: "line",
+        type: ToolType.LINE,
         offsetX: offsetX,
         offsetY: offsetY,
         stroke: color,
@@ -155,7 +149,7 @@ export default function Whiteboard({
     } else {
       newBoardEvent = {
         id,
-        type: "rectangle",
+        type: ToolType.RECTANGLE,
         offsetX: offsetX,
         offsetY: offsetY,
         stroke: color,
@@ -164,59 +158,18 @@ export default function Whiteboard({
       };
     }
     currentEventIdRef.current = id;
-
-    // 1. Send the initial event creation
     sendBoardEventToSocket(newBoardEvent);
-    
 
     setWhiteBoardEvents((prev: WhiteBoardEventType[]) => [
       ...prev,
       newBoardEvent,
     ]);
 
-    //   if (tool === "pencil") {
-    //     return [
-    //       ...prev,
-    //       {
-    //         type: tool,
-    //         offsetX: offsetX,
-    //         offsetY: offsetY,
-    //         path: [[offsetX, offsetY]],
-    //         stroke: color,
-    //       },
-    //     ];
-    //   } else if (tool == "rectangle") {
-    //     return [
-    //       ...prev,
-    //       {
-    //         type: tool,
-    //         offsetX: offsetX,
-    //         offsetY: offsetY,
-    //         stroke: color,
-    //         currentX: offsetX,
-    //         currentY: offsetY,
-    //       },
-    //     ];
-    //   } else {
-    //     return [
-    //       ...prev,
-    //       {
-    //         type: tool,
-    //         offsetX: offsetX,
-    //         offsetY: offsetY,
-    //         stroke: color,
-    //         currentX: offsetX,
-    //         currentY: offsetY,
-    //       },
-    //     ];
-    //   }
-    // });
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if ( !enableDrawing || !isOwner) return;
+    if (!enableDrawing || !isOwner) return;
     const { offsetX, offsetY } = e.nativeEvent;
-    // console.log("MOUSE MOVING", offsetX, offsetY);
 
     setWhiteBoardEvents((prevWhiteBoardEvents: WhiteBoardEventType[]) => {
       const id = currentEventIdRef.current;
@@ -225,36 +178,10 @@ export default function Whiteboard({
 
       if (idx === -1) return prevWhiteBoardEvents;
 
-      // if (idx === -1) {
-      //   // should not happen normally; but be defensive: create placeholder
-      //   const placeholder: WhiteBoardEventType = {
-      //     id,
-      //     type:
-      //       tool === "pencil"
-      //         ? "pencil"
-      //         : tool === "rectangle"
-      //         ? "rectangle"
-      //         : "line",
-      //     offsetX,
-      //     offsetY,
-      //     stroke: color,
-      //     path: tool === "pencil" ? [[offsetX, offsetY]] : undefined,
-      //     currentX: offsetX,
-      //     currentY: offsetY,
-      //   };
-      //   return [...prevWhiteBoardEvents, placeholder];
-      // }
-
-      // const lastWhiteBoardEventIndex = prevWhiteBoardEvents.length - 1;
-      // if (lastWhiteBoardEventIndex < 0) {
-      //   return prevWhiteBoardEvents;
-      // }
-
       const ev = prevWhiteBoardEvents[idx];
-      if (ev.type === "pencil") {
+      if (ev.type === ToolType.PENCIL) {
         const updatedPath = [...(ev.path ?? []), [offsetX, offsetY]];
         const updatedEvent = { ...ev, path: updatedPath };
-        // send update to server
         if (isOwner && socket && socket.connected) {
           socket.emit("sendDrawingUpdate", {
             roomId,
@@ -286,8 +213,6 @@ export default function Whiteboard({
   };
 
   const handleMouseUp = () => {
-    // const { offsetX, offsetY } = e.nativeEvent;
-    // console.log("MOUSE UP", offsetX, offsetY);
     if (!isOwner) return;
     currentEventIdRef.current = null;
     setEnableDrawing(false);
@@ -295,22 +220,46 @@ export default function Whiteboard({
 
   return (
     <>
-      {gameStatus != "playing" ? (
-        <div
-          className="max-md:w-full w-8/12 my-10 border max-md:h-2/5 h-screen 
+      {gameStatus != GameStatus.PLAYING ? (
+        gameStatus === GameStatus.FINISHED ? (
+          <div
+            className="max-md:w-full w-8/12 my-10 border max-md:h-2/5 h-screen 
                 flex items-center justify-center  
                 border-gray-800 bg-white/20 backdrop-blur-md 
                   rounded-xl shadow-lg"
-        >
-          {isOwner && (
-            <button
-              onClick={handleStartGame}
-              className="cursor-pointer border border-gray-300 p-2 rounded-md"
-            >
-              Start Game
-            </button>
-          )}
-        </div>
+          >
+            <div className="flex-col gap-10 text-center">
+              <p className="text-2xl font-bold text-green-500">
+                Game ended !!{" "}
+              </p>
+              <p className="text-sm">
+                Browse back to the home page to start a new game
+              </p>
+              <button
+                className="rounded-lg cursor-pointer bg-blue-600 p-2 mt-5 text-white"
+                onClick={() => navigate("/home")}
+              >
+                Go to Home
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div
+            className="max-md:w-full w-8/12 my-10 border max-md:h-2/5 h-screen 
+                flex items-center justify-center  
+                border-gray-800 bg-white/20 backdrop-blur-md 
+                  rounded-xl shadow-lg"
+          >
+            {isOwner && (
+              <button
+                onClick={handleStartGame}
+                className="cursor-pointer border border-gray-300 p-2 rounded-md"
+              >
+                Start Game
+              </button>
+            )}
+          </div>
+        )
       ) : (
         <canvas
           ref={canvasRef}

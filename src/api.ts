@@ -4,7 +4,7 @@ import type { CheckRoomIdType, CreateRoomType, LoginDataType, RegisterDataType }
 
 // 1. Create a base Axios instance
 const api = axios.create({
-  baseURL: import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000', // 👈 Your NestJS Auth Controller base URL
+  baseURL: import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -30,11 +30,11 @@ api.interceptors.request.use(config => {
 
 // 3. Define and export specific API functions
 export const authApi = {
-  // POST /auth/register
   register: (data:RegisterDataType) => api.post('/auth/register', data), 
   
-  // POST /auth/login
   login: (data:LoginDataType) => api.post('/auth/login', data),
+
+  verify: ()=> api.post('auth/verifyUser'),
 };
 
 export const roomApi={

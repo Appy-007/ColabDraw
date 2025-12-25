@@ -11,6 +11,7 @@ import type { DefaultEventsMap } from "@socket.io/component-emitter";
 import Scoreboard from "../components/Scoreboard";
 import Chat from "../components/Chat";
 import Guess from "../components/Guess";
+import { ToolType, GameStatus } from "../types.";
 
 export type PathType = number[];
 
@@ -38,52 +39,43 @@ type ChatMessage = {
   isCorrectGuess: boolean;
 };
 
+const TIMER_DUR=50
+
 export default function Room() {
   const params = useParams();
   const roomId = params.roomId;
-  const [totaMembers, setTotalMembers] = useState(1);
   const [whiteBoardEvents, setWhiteBoardEvents] = useState<
     WhiteBoardEventType[]
   >([]);
-  const [gameStatus, setGameStatus] = useState<
-    "idle" | "playing" | "round_end" | "finished"
-  >("idle");
+  const [gameStatus, setGameStatus] = useState<string>(GameStatus.IDLE);
   const [currentDrawer, setcurrentDrawer] = useState<string>("");
   const [currentWordHint, setCurrentWordHint] = useState("");
   const [currentWord, setCurrentWord] = useState("");
   const [currentTimer, setCurrentTimer] = useState<number>();
-  const [scoreboard, setScoredboard] = useState<ScoreEntry[]>([
-    { userId: "", username: "", score: 0 },
-  ]);
+  const [scoreboard, setScoredboard] = useState<ScoreEntry[]>([{ userId: "", username: "", score: 0 }]);
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState<ChatMessage>();
   const [guessInput, setGuessInput] = useState("");
-  const [enableGuessInput,setEnableGuessInput]=useState(true)
+  const [enableGuessInput, setEnableGuessInput] = useState(true);
+  const [tool, setTool] = useState<string>(ToolType.PENCIL);
+  const [color, setColor] = useState<string>("#000000");
+  const [isOwner, setIsOwner] = useState<boolean>(false);
+  const [socket, setSocket] = useState<Socket | null | undefined>();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasctxRef = useRef(null);
   const chatBoxRef = useRef<HTMLDivElement>(null);
 
-  const ToolType = {
-    PENCIL: "pencil",
-    LINE: "line",
-    RECTANGLE: "rectangle",
-  };
-  const [tool, setTool] = useState<string>(ToolType.PENCIL);
-  const [color, setColor] = useState<string>("#000000");
-  const [isOwner, setIsOwner] = useState<boolean>(false);
-
-  const [socket, setSocket] = useState<Socket | null | undefined>();
   const navigate = useNavigate();
 
-   const getDataFromLocalStorage = localStorage.getItem("data") || "";
-    const parsedData = JSON.parse(getDataFromLocalStorage);
-    if (!parsedData && !parsedData.user.username) {
-      throw new Error(
-        "Error occured in parsing data from localStorage..try login again"
-      );
-    }
+  const getDataFromLocalStorage = localStorage.getItem("data") || "";
+  const parsedData = JSON.parse(getDataFromLocalStorage);
+  if (!parsedData && !parsedData.user.username) {
+    throw new Error(
+      "Error occured in parsing data from localStorage..try login again"
+    );
+  }
 
   console.log("CANVAS", canvasRef.current, canvasctxRef.current);
 
@@ -95,7 +87,7 @@ export default function Room() {
 
     let user: string;
     let useremail: string;
-   
+
     async function initializeRoom() {
       if (!roomId) {
         return;
@@ -103,7 +95,6 @@ export default function Room() {
 
       try {
         const room = await checkIfRoomExits(roomId);
-
         user = parsedData.user.username;
         useremail = parsedData.user.email;
         setcurrentDrawer(user);
@@ -114,8 +105,6 @@ export default function Room() {
         }
 
         const roomData = room.data[0];
-        console.log("ROOM", roomData);
-        // console.log("JOINED USERS", roomData?.joinedUsers);
         const isUserOwner = roomData.ownerEmailId === useremail;
         setCurrentUserEmail(roomData.ownerEmailId);
         setScoredboard(roomData?.scoreBoard || []);
@@ -123,7 +112,6 @@ export default function Room() {
         newSocket = getAuthenticatedSocket();
 
         if (!newSocket) throw new Error("Socket not initialized");
-
         setSocket(newSocket);
         const emitSocketEvent = (
           s: Socket<DefaultEventsMap, DefaultEventsMap>,
@@ -136,11 +124,11 @@ export default function Room() {
           }
         };
         if (newSocket && newSocket.connected) {
-          console.log("Socket already connected. Emitting createRoom...");
+          console.log("Socket already connected. Emitting createRoom/joinRoom...");
           emitSocketEvent(newSocket, user);
         } else {
           newSocket.once("connect", () => {
-            console.log("Connected to server. Emitting createRoom...");
+            console.log("Connected to server. Emitting createRoom/joinRoom...");
             if (newSocket) {
               console.log("New Socket initialized");
               emitSocketEvent(newSocket, user);
@@ -158,10 +146,8 @@ export default function Room() {
       if (newSocket && newSocket.connected) {
         console.log("Cleaning up socket connection.");
         if (user && roomId) {
-          // Send the specific room ID the user is leaving
           newSocket.emit("leaveRoom", { roomId: roomId }, (response: any) => {
             console.log("leaveRoom response:", response);
-            // Optionally check for response success here if needed, but the important part is the emission.
           });
         }
         newSocket.disconnect();
@@ -173,15 +159,11 @@ export default function Room() {
     if (!socket) return;
 
     socket.on("roomCreated", (payload) => {
-      // console.log(`Room created! ID: ${payload.roomId}`);
       toast.success(payload.message);
-      setTotalMembers(payload.count);
     });
 
     socket.on("roomJoined", (payload) => {
-      // console.log("Room joined");
       toast.success(payload.message);
-      setTotalMembers(payload.count);
     });
 
     socket.on("roomLeft", (payload) => {
@@ -190,16 +172,13 @@ export default function Room() {
     });
 
     socket.on("userJoined", (payload) => {
-      // console.log(`New user joined: ${payload.username}`);
       toast.success(` ${payload.message}`);
       fetchScoreBoard();
-      setTotalMembers(payload.count);
     });
 
     socket.on("userLeft", (payload) => {
       // console.log("An user left the room", payload);
       toast.success(payload.message);
-      setTotalMembers(payload.count);
     });
 
     socket.on("receiveDrawingUpdate", (payload) => {
@@ -214,17 +193,17 @@ export default function Room() {
               payload.type === "pencil_event"
                 ? "pencil"
                 : payload.type === "shape_event"
-                ? payload.shapeType || "line"
+                ? payload.shapeType
                 : "pencil",
-            offsetX: payload.offsetX ?? 0,
-            offsetY: payload.offsetY ?? 0,
-            stroke: payload.stroke ?? "#000000",
+            offsetX: payload?.offsetX ?? 0,
+            offsetY: payload?.offsetY ?? 0,
+            stroke: payload?.stroke ?? "#000000",
             path:
               payload.type === "pencil_event"
-                ? ([payload.point].filter(Boolean) as any)
+                ? ([payload?.point].filter(Boolean) as any)
                 : undefined,
-            currentX: payload.currentX,
-            currentY: payload.currentY,
+            currentX: payload?.currentX,
+            currentY: payload?.currentY,
           };
           return [...prev, placeholder];
         }
@@ -266,7 +245,7 @@ export default function Room() {
       setGameStatus(payload.mode);
       setCurrentWord(payload.word);
       setCurrentWordHint(payload.maskedWord);
-      setCurrentTimer(30);
+      setCurrentTimer(TIMER_DUR);
     });
 
     socket.on("receiveStartGame", (payload) => {
@@ -276,37 +255,35 @@ export default function Room() {
       setCurrentWordHint(payload.maskedWord);
       setEnableGuessInput(true);
       setGuessInput("");
-      setCurrentTimer(30);
+      setCurrentTimer(TIMER_DUR);
     });
 
-    socket.on("wrongGuess",(payload)=>{
+    socket.on("wrongGuess", (payload) => {
       toast.error(payload.message);
-    })
+    });
 
-    socket.on("correctGuess", (payload)=>{
+    socket.on("correctGuess", (payload) => {
       toast.info(payload.message);
       setEnableGuessInput(false);
+    });
 
-    })
-
-    socket.on("updateScoreBoard", (payload)=>{
-      if(payload?.scoreBoard){
-        setScoredboard(payload.scoreBoard)
+    socket.on("updateScoreBoard", (payload) => {
+      if (payload?.scoreBoard) {
+        setScoredboard(payload.scoreBoard);
       }
-    })
+    });
 
-    socket.on("endGame" , (payload)=>{
-      setGameStatus(payload.mode);
-      toast.info(payload?.message);
-    })
+    socket.on("endGame", (payload) => {
+      if (payload) {
+        setGameStatus(payload.mode);
+        toast.info(payload.message);
+      }
+    });
 
     socket.on("roomError", (payload) => {
       console.log(`ERROR: ${payload.message}`);
       toast.error(payload.message);
     });
-
-    // 💡 Listener for drawing events (as per previous discussion)
-    // socket.on('drawing', (data) => { /* Redraw logic */ });
 
     return () => {
       socket.off("roomCreated");
@@ -389,7 +366,15 @@ export default function Room() {
       socket.emit("checkWord", {
         roomId,
         userId: parsedData.user.email,
-        word:guessInput,
+        word: guessInput,
+      });
+    }
+  };
+
+  const handleRoundEnd = () => {
+    if (socket && socket.connected) {
+      socket.emit("roundEnd", {
+        roomId,
       });
     }
   };
@@ -397,24 +382,23 @@ export default function Room() {
   return (
     <>
       <div className="bg-stone-100">
-        <p className="font-bold text-lg px-20 pb-2 py-2 text-gray-700">
-          Current users {totaMembers}
-        </p>
         <div className="px-20">
           {isOwner && (
             <WhiteBoardToolBar
+              isOwner={isOwner}
               tool={tool}
               setTool={setTool}
               color={color}
               setColor={setColor}
               onClearCanvasClick={handleClearCanvas}
+              onRoundEnd={handleRoundEnd}
               onLeaveRoom={handleLeaveRoom}
               gameStatus={gameStatus}
               setGameStatus={setGameStatus}
             />
           )}
 
-          {gameStatus === "playing" && (
+          {gameStatus === GameStatus.PLAYING && (
             <Guess
               isOwner={isOwner}
               guessInput={guessInput}
@@ -454,8 +438,6 @@ export default function Room() {
               gameStatus={gameStatus}
               setGameStatus={setGameStatus}
               handleStartGame={handleStartGame}
-              currentWord={currentWord}
-              currentWordHint={currentWordHint}
             />
           </div>
         </div>

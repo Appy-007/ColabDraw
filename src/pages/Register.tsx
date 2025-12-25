@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import RegisterForm from "../components/RegsiterForm";
 import Login from "../components/Login";
+import { useNavigate } from "react-router-dom";
+import { authApi } from "../api";
+import { toast } from "react-toastify";
 
 export default function Register() {
   const [isModalOpen, setIsModalOpen] = useState<number>(-1);
@@ -9,18 +12,45 @@ export default function Register() {
     login: 1,
   };
 
+  const navigate = useNavigate();
+  useEffect(() => {
+    const validateToken = async () => {
+      try {
+        await authApi.verify();
+        navigate("/home");
+      } catch (error) {
+        console.log(error);
+        localStorage.removeItem("data");
+        toast.error("Token expired ...please login again")       
+      }
+    };
+    const getDataFromLocalStorage = localStorage.getItem("data");
+    if (getDataFromLocalStorage) {
+      try {
+        const parsedData = JSON.parse(getDataFromLocalStorage);
+        if (parsedData && parsedData.user) {
+          validateToken();
+        }
+      } catch (error) {
+        console.error("Error parsing local storage data:", error);
+      }
+    }
+  }, [navigate]);
+
   const handleModal = (num: number) => setIsModalOpen(num);
   return (
     <>
-      <div className="flex h-10/12 items-center justify-center  bg-stone-100">
+      <div className="flex h-full items-center justify-center  bg-stone-100">
         <div className="flex flex-col gap-10">
           <div>
-            <h1 className="font-bold text-4xl pb-2">Play, Draw, Guess !</h1>
+            <h1 className="font-bold text-5xl pb-2 font-stretch-extra-expanded">
+              Join the Fun !
+            </h1>
           </div>
 
           <div>
-            <p className="text-gray-400 text-md text-left">
-             The drawing game just to enjoy at your desk with your colleagues
+            <p className="text-gray-400 font-bold text-2xl text-left font-stretch-extra-expanded">
+              Ready to draw, guess & win ?
             </p>
           </div>
 
@@ -41,9 +71,19 @@ export default function Register() {
         </div>
       </div>
 
-      {isModalOpen===MODAL_TYPE.register && <RegisterForm isOpen={isModalOpen===MODAL_TYPE.register} setShowModal={setIsModalOpen}/>}
+      {isModalOpen === MODAL_TYPE.register && (
+        <RegisterForm
+          isOpen={isModalOpen === MODAL_TYPE.register}
+          setShowModal={setIsModalOpen}
+        />
+      )}
 
-      {isModalOpen===MODAL_TYPE.login && <Login isOpen={isModalOpen===MODAL_TYPE.login} setShowModal={setIsModalOpen}/>}
+      {isModalOpen === MODAL_TYPE.login && (
+        <Login
+          isOpen={isModalOpen === MODAL_TYPE.login}
+          setShowModal={setIsModalOpen}
+        />
+      )}
     </>
   );
 }

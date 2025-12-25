@@ -41,20 +41,18 @@ export default function JoinRoom({ isOpen, setShowModal }: FormPropTypes) {
         toast.error("Please enter all the fields");
         return;
       }
-      const socketData = {
+      const roomData = {
         name: joinRoom.name.trim(),
         roomId: joinRoom.roomId.trim(),
       };
   
       try {
-      const resp=await roomApi.joinRoom(socketData)
-      // console.log(resp)
+      const resp=await roomApi.joinRoom(roomData)
       if(!resp){
         toast.error('Error occured in creating room')
         throw new Error('Error occured in creating room')
       }
       const roomId=resp.data.data.roomId
-      toast.success('Room joined successfully !')
       navigate(`/room/${roomId}`)
       } catch (error) {
         console.log(error) 

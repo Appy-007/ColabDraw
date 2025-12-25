@@ -6,7 +6,7 @@ import { authApi } from "../api";
 import type { AxiosError } from "axios";
 import { useNavigate } from "react-router-dom";
 export default function RegisterForm({ isOpen, setShowModal }: FormPropTypes) {
-  const navigate=useNavigate()
+  const navigate = useNavigate();
   const formRef = useRef<HTMLFormElement>(null);
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -22,29 +22,30 @@ export default function RegisterForm({ isOpen, setShowModal }: FormPropTypes) {
     }
 
     try {
-      const apiData={
-        name:data.name.toString().trim(),
-        email:data.email.toString().trim(),
-        password:data.password.toString().trim()
-      }
-      // console.log(apiData)
-      const response=await authApi.register(apiData);
-      // console.log(response)
-      if(response?.data?.data)
-        localStorage.setItem('data',JSON.stringify(response.data.data))
-      
+      const apiData = {
+        name: data.name.toString().trim(),
+        email: data.email.toString().trim(),
+        password: data.password.toString().trim(),
+      };
+      const response = await authApi.register(apiData);
+      if (response?.data?.data)
+        localStorage.setItem("data", JSON.stringify(response.data.data));
       toast.success("User registered successfully");
-      navigate('/home')
+      navigate("/home");
     } catch (error) {
-      const axiosError=error as AxiosError
-      console.log(axiosError)
-      const message = axiosError?.response?.data?.message  || `An error occurred during register.`;
+      const axiosError = error as AxiosError;
+      console.log(axiosError);
+      const message = `An error occurred during register.`;
       toast.error(message);
     }
   };
   return (
     <>
-      <Modal isOpen={isOpen} onClose={() => setShowModal(-1)} targetRoot='modal-root'>
+      <Modal
+        isOpen={isOpen}
+        onClose={() => setShowModal(-1)}
+        targetRoot="modal-root"
+      >
         <div>
           <form
             ref={formRef}

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import Timer from "./Timer";
+import { ToolType,GameStatus } from "../types.";
 
 export default function WhiteBoardToolBar({
   tool,
@@ -8,15 +9,12 @@ export default function WhiteBoardToolBar({
   color,
   setColor,
   onClearCanvasClick,
+  onRoundEnd,
   onLeaveRoom,
   gameStatus,
   setGameStatus,
+  isOwner
 }: any) {
-  const ToolType = {
-    PENCIL: "pencil",
-    LINE: "line",
-    RECTANGLE: "rectangle",
-  };
 
   return (
     <>
@@ -68,11 +66,13 @@ export default function WhiteBoardToolBar({
           />
         </div>
         <div>
-          {gameStatus === "playing" && (
+          {gameStatus === GameStatus.PLAYING && (
             <Timer
               gameStatus={gameStatus}
               setGameStatus={setGameStatus}
               onClearCanvasClick={onClearCanvasClick}
+              isOwner={isOwner}
+              onRoundEnd={onRoundEnd}
             />
           )}
         </div>
