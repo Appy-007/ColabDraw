@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { CheckRoomIdType, CreateRoomType, LoginDataType, RegisterDataType } from './types.';
+import type { CheckRoomIdType, CreateRoomType, JoinRoomType, LoginDataType, RegisterDataType } from './types.';
 
 //base Axios instance
 const api = axios.create({
@@ -36,7 +36,7 @@ export const authApi = {
 export const roomApi={
   createRoom: (data:CreateRoomType)=> api.post('/room/createRoom',data),
 
-  joinRoom: (data:CreateRoomType)=> api.post('/room/joinRoom',data),
+  joinRoom: (data:JoinRoomType)=> api.post('/room/joinRoom',data),
 
   checkRoom : (data:CheckRoomIdType)=> api.post('/room/checkIfRoomExists',data),
 

@@ -11,7 +11,13 @@ export interface LoginDataType {
 
 export interface CreateRoomType {
     name:string,
-    roomId:string
+    roomId:string,
+    rounds:number,
+}
+
+export interface JoinRoomType {
+    name:string,
+    roomId:string,
 }
 
 export interface CheckRoomIdType {
