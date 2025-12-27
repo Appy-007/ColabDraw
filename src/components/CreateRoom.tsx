@@ -13,6 +13,7 @@ export type FormPropTypes = {
 type CreateRoomType = {
   name: string;
   roomId: string;
+  rounds: string;
 };
 
 export default function CreateRoom({ isOpen, setShowModal }: FormPropTypes) {
@@ -20,6 +21,7 @@ export default function CreateRoom({ isOpen, setShowModal }: FormPropTypes) {
   const [createRoom, setCreateRoom] = useState<CreateRoomType>({
     name: "",
     roomId: "",
+    rounds: "",
   });
 
   const handleChange = (
@@ -63,13 +65,26 @@ export default function CreateRoom({ isOpen, setShowModal }: FormPropTypes) {
 
   const handleSubmit = async (event: React.ChangeEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!createRoom.name || !createRoom.roomId) {
+    if (!createRoom.name || !createRoom.roomId || !createRoom.rounds) {
       toast.error("Please enter all the fields");
       return;
     }
+
+    if(!parseInt(createRoom.rounds.trim())){
+      toast.error("Please enter a valid number in the rounds field");
+      return;
+    }
+
+    const roundNum=parseInt(createRoom.rounds.trim());
+    if(roundNum <3 || roundNum >7){
+      toast.error("Rounds can be between 3 and 7");
+      return;
+    }
+    
     const roomData = {
       name: createRoom.name.trim(),
       roomId: createRoom.roomId.trim(),
+      rounds: roundNum,
     };
 
     try {
@@ -78,10 +93,13 @@ export default function CreateRoom({ isOpen, setShowModal }: FormPropTypes) {
         toast.error("Error occured in creating room");
         throw new Error("Error occured in creating room");
       }
-      const roomId = resp.data.data.roomId;
-      navigate(`/room/${roomId}`);
+      const roomId = resp?.data?.data?.roomId;
+      if (roomId) navigate(`/room/${roomId}`);
     } catch (error) {
-      console.log(error);
+      console.log("Error in create Room", error);
+      toast.error(
+        error?.response?.data?.message || "Error occured in creating room"
+      );
     }
   };
   return (
@@ -137,6 +155,18 @@ export default function CreateRoom({ isOpen, setShowModal }: FormPropTypes) {
                 </button>
               </div>
             </div>
+
+             <input
+                className=" outline-none border border-gray-400 px-2 py-1 rounded-md"
+                type="text"
+                placeholder="Enter number of rounds"
+                name="rounds"
+                id="rounds"
+                value={createRoom?.rounds}
+                onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                  handleChange(event, "rounds")
+                }
+              />
 
             <button
               type="submit"

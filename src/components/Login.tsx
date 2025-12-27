@@ -27,15 +27,19 @@ export default function Login({ isOpen, setShowModal }: FormPropTypes) {
         password: data.password.toString().trim(),
       };
       const response = await authApi.login(apiData);
-      if (response?.data?.data)
-        localStorage.setItem("data", JSON.stringify(response.data.data));
-      toast.success(response.data.message);
-      navigate("/home");
+      if (response?.data?.data) {
+        localStorage.setItem(
+          "scribbleDraw-data",
+          JSON.stringify(response.data.data)
+        );
+        toast.success(response.data?.message || "User Logged in successfully");
+        navigate("/home");
+      } else {
+        toast.error("Sorry,unable to login.Try Again");
+      }
     } catch (error) {
-      const axiosError = error as AxiosError;
-      console.log(axiosError);
-      const message = `An error occurred during login.`;
-      toast.error(message);
+      const message = `An error occurred during login`;
+      toast.error(error?.response?.data?.message || message);
     }
   };
   return (

@@ -1,7 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
-import Timer from "./Timer";
-import { ToolType,GameStatus } from "../types.";
+import { ToolType} from "../types.";
 
 export default function WhiteBoardToolBar({
   tool,
@@ -9,11 +7,7 @@ export default function WhiteBoardToolBar({
   color,
   setColor,
   onClearCanvasClick,
-  onRoundEnd,
   onLeaveRoom,
-  gameStatus,
-  setGameStatus,
-  isOwner
 }: any) {
 
   return (
@@ -64,17 +58,6 @@ export default function WhiteBoardToolBar({
             value={color}
             onChange={(e) => setColor(e.target.value)}
           />
-        </div>
-        <div>
-          {gameStatus === GameStatus.PLAYING && (
-            <Timer
-              gameStatus={gameStatus}
-              setGameStatus={setGameStatus}
-              onClearCanvasClick={onClearCanvasClick}
-              isOwner={isOwner}
-              onRoundEnd={onRoundEnd}
-            />
-          )}
         </div>
         <div className="flex gap-2">
           <button
