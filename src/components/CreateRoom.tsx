@@ -95,7 +95,8 @@ export default function CreateRoom({ isOpen, setShowModal }: FormPropTypes) {
       }
       const roomId = resp?.data?.data?.roomId;
       if (roomId) navigate(`/room/${roomId}`);
-    } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error :any) {
       console.log("Error in create Room", error);
       toast.error(
         error?.response?.data?.message || "Error occured in creating room"

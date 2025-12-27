@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useRef, type FormEvent } from "react";
 import type { FormPropTypes } from "./CreateRoom";
 import Modal from "./Modal";
 import { toast } from "react-toastify";
 import { authApi } from "../api";
-import type { AxiosError } from "axios";
 import { useNavigate } from "react-router-dom";
 export default function RegisterForm({ isOpen, setShowModal }: FormPropTypes) {
   const navigate = useNavigate();
@@ -38,7 +38,7 @@ export default function RegisterForm({ isOpen, setShowModal }: FormPropTypes) {
       } else {
         toast.error("Sorry,unable to register.Try Again");
       }
-    } catch (error) {
+    } catch (error:any) {
       const message = `An error occurred during register`;
       toast.error(error?.response?.data?.message ||  message);
     }

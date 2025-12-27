@@ -3,7 +3,6 @@ import type { FormPropTypes } from "./CreateRoom";
 import Modal from "./Modal";
 import { toast } from "react-toastify";
 import { authApi } from "../api";
-import type { AxiosError } from "axios";
 import { useNavigate } from "react-router-dom";
 
 export default function Login({ isOpen, setShowModal }: FormPropTypes) {
@@ -37,7 +36,8 @@ export default function Login({ isOpen, setShowModal }: FormPropTypes) {
       } else {
         toast.error("Sorry,unable to login.Try Again");
       }
-    } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error:any) {
       const message = `An error occurred during login`;
       toast.error(error?.response?.data?.message || message);
     }
