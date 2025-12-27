@@ -1,13 +1,27 @@
-export default function Chat(props) {
+type ChatMessage = {
+  senderId: string;
+  senderName: string;
+  text: string;
+  isCorrectGuess: boolean;
+};
+
+type ChatProps = {
+  chatBoxRef: React.RefObject<HTMLDivElement | null>;
+  chatMessages: ChatMessage[];
+  currentUserEmail: string;
+  handleSubmitGuess: () => void;
+  chatInput: string;
+  setChatInput: React.Dispatch<React.SetStateAction<string>>;
+};
+
+export default function Chat(props: ChatProps) {
   const {
     chatBoxRef,
     chatMessages,
     currentUserEmail,
     handleSubmitGuess,
-    guessInput,
-    setGuessInput,
-    gameStatus,
-    isDrawer = false,
+    chatInput,
+    setChatInput,
   } = props;
 
   return (
@@ -55,11 +69,9 @@ export default function Chat(props) {
         <form onSubmit={handleSubmitGuess} className="p-4 border-t bg-gray-50">
           <input
             type="text"
-            value={guessInput}
-            onChange={(e) => setGuessInput(e.target.value)}
-            placeholder={
-              isDrawer ? "Drawers cannot guess..." : "Type your guess here..."
-            }
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            placeholder={"Disabled now..."}
             className="text-sm w-full p-1 border border-gray-300 rounded-lg
                      focus:ring-indigo-500 focus:border-indigo-500"
             disabled={true}

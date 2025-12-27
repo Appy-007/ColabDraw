@@ -40,6 +40,12 @@ type ChatMessage = {
   isCorrectGuess: boolean;
 };
 
+type LocalStorageRefType = {
+  user: {
+    username: string;
+    email: string;
+  };
+};
 
 export default function Room() {
   const params = useParams();
@@ -55,7 +61,7 @@ export default function Room() {
   const [scoreboard, setScoredboard] = useState<ScoreEntry[]>([
     { userId: "", username: "", score: 0 },
   ]);
-  const [forceTimerOff,setForceTimerOff]=useState<boolean>(false);
+  const [forceTimerOff, setForceTimerOff] = useState<boolean>(false);
 
   const [currentUser, setCurrentUser] = useState<string>("");
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
@@ -63,8 +69,7 @@ export default function Room() {
   const [isOwner, setIsOwner] = useState<boolean>(false);
   const [currentOwnerEmail, setCurrentOwnerEmail] = useState<string>("");
 
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [chatInput, setChatInput] = useState<ChatMessage>();
+  const [chatInput, setChatInput] = useState<string>("");
 
   const [guessInput, setGuessInput] = useState("");
   const [enableGuessInput, setEnableGuessInput] = useState(true);
@@ -77,7 +82,9 @@ export default function Room() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasctxRef = useRef(null);
   const chatBoxRef = useRef<HTMLDivElement>(null);
-  const localStorageRef = useRef(null);
+  const localStorageRef = useRef<LocalStorageRefType>(null);
+
+  const chatMessages: ChatMessage[] = [];
 
   const navigate = useNavigate();
 
@@ -94,7 +101,8 @@ export default function Room() {
         throw new Error("invalid data structure in localStorage");
       }
       localStorageRef.current = parsedData;
-    } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error:any) {
       toast.error("Failed to fetch data from localStorage...try relogin");
       console.error("storage Error:", error?.message);
       navigate("/home");
@@ -117,8 +125,8 @@ export default function Room() {
 
       try {
         const room = await checkIfRoomExits(roomId);
-        user = localStorageRef.current?.user?.username;
-        useremail = localStorageRef.current?.user?.email;
+        user = localStorageRef.current?.user?.username ?? "" ;
+        useremail = localStorageRef.current?.user?.email ?? "" ;
         setCurrentUser(user);
         setCurrentUserEmail(useremail);
 
@@ -191,7 +199,7 @@ export default function Room() {
 
     socket.on("roomLeft", (payload) => {
       toast.success(payload.message);
-      navigate('/home');
+      navigate("/home");
     });
 
     socket.on("userJoined", (payload) => {
@@ -260,9 +268,9 @@ export default function Room() {
       });
     });
 
-    socket.on("receiveClearCanvas", ()=>{
+    socket.on("receiveClearCanvas", () => {
       handleClearCanvas();
-    })
+    });
 
     socket.on("receiveStartGameForDrawer", (payload) => {
       setGameStatus(payload.mode);
@@ -294,11 +302,11 @@ export default function Room() {
       }
     });
 
-    socket.on('receiveRoundEnd',(payload)=>{
-      if(payload?.message && !isOwner){
+    socket.on("receiveRoundEnd", (payload) => {
+      if (payload?.message && !isOwner) {
         setForceTimerOff(true);
       }
-    })
+    });
 
     socket.on("endGame", (payload) => {
       if (payload) {
@@ -358,9 +366,9 @@ export default function Room() {
 
     ctx.clearRect(0, 0, canv.width / scale, canv.height / scale);
 
-    if(isOwner){
-      if(socket && socket.connected){
-        socket.emit("clearCanvas",{roomId: roomId})
+    if (isOwner) {
+      if (socket && socket.connected) {
+        socket.emit("clearCanvas", { roomId: roomId });
       }
     }
 
@@ -384,7 +392,7 @@ export default function Room() {
       const response = await roomApi.fetchRoomScoreBoard({ roomId: roomId! });
       setScoredboard(response.data.data);
     } catch (error) {
-      console.log("fetchScoreBoard error",error);
+      console.log("fetchScoreBoard error", error);
     }
   };
 
@@ -455,10 +463,10 @@ export default function Room() {
               <Chat
                 chatBoxRef={chatBoxRef}
                 chatMessages={chatMessages}
-                guessInput={chatInput}
-                setGuessInput={setChatInput}
-                gameStatus={gameStatus}
                 currentUserEmail={currentUserEmail}
+                chatInput={chatInput}
+                setChatInput={setChatInput}
+                handleSubmitGuess={() => {}}
               />
             </div>
             <Whiteboard
