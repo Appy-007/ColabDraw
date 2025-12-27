@@ -22,7 +22,7 @@ export default function Register() {
       } catch (error) {
         console.log(error);
         localStorage.removeItem("scribbleDraw-data");
-        toast.error("Token expired ...please login again")       
+        toast.error("Session expired ...please login again")       
       }
     };
     const getDataFromLocalStorage = localStorage.getItem("scribbleDraw-data");

@@ -56,6 +56,7 @@ export default function Guess(props: GuessProps) {
                 className="flex-grow px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-md transition duration-150 ease-in-out
           "
                 disabled={!enableGuessInput}
+                autoComplete="off"
                 value={guessInput}
                 onChange={(e) => setGuessInput(e.target.value)}
               />

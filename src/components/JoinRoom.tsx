@@ -3,7 +3,6 @@ import Modal from "./Modal";
 import { toast } from "react-toastify";
 import { roomApi } from "../api";
 import { useNavigate } from "react-router-dom";
-import type { AxiosError } from "axios";
 
 export type FormPropTypes = {
   isOpen: boolean;
@@ -91,6 +90,7 @@ export default function JoinRoom({ isOpen, setShowModal }: FormPropTypes) {
               name="roomId"
               id="roomId"
               value={joinRoom.roomId}
+              autoComplete="off"
               onChange={(e) => handleChange(e, "roomId")}
             />
 

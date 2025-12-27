@@ -38,10 +38,8 @@ export default function Login({ isOpen, setShowModal }: FormPropTypes) {
         toast.error("Sorry,unable to login.Try Again");
       }
     } catch (error) {
-      const axiosError = error as AxiosError;
-      console.log(axiosError);
       const message = `An error occurred during login`;
-      toast.error(message);
+      toast.error(error?.response?.data?.message || message);
     }
   };
   return (

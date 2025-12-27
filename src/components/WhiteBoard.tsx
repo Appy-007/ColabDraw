@@ -47,7 +47,7 @@ export default function Whiteboard({
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log("USE EFFECT CALLED");
+    // console.log("USE EFFECT CALLED");
     const canv = canvasRef.current;
     if (canv) {
       const rect = canv.getBoundingClientRect();
@@ -60,7 +60,7 @@ export default function Whiteboard({
       const ctx = canv?.getContext("2d");
       ctx?.scale(scale, scale);
       canvasctxRef.current = ctx;
-      console.log("CANVAS CTX", canvasctxRef.current);
+      // console.log("CANVAS CTX", canvasctxRef.current);
     }
   }, [canvasRef, canvasctxRef, gameStatus]);
 
@@ -74,11 +74,11 @@ export default function Whiteboard({
     const canvasElement = canvasRef.current;
     if (canvasElement) {
       const canvas = rough.canvas(canvasElement);
-      console.log("UseLayout called");
+      // console.log("UseLayout called");
 
       if (whiteBoardEvents?.length > 0) {
         const scale = window.devicePixelRatio || 1;
-        console.log("CTX REF", canvasctxRef.current);
+        // console.log("CTX REF", canvasctxRef.current);
         canvasctxRef.current?.clearRect(
           0,
           0,

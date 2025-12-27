@@ -40,7 +40,6 @@ type ChatMessage = {
   isCorrectGuess: boolean;
 };
 
-const TIMER_DUR = 50;
 
 export default function Room() {
   const params = useParams();
@@ -49,13 +48,14 @@ export default function Room() {
   const [whiteBoardEvents, setWhiteBoardEvents] = useState<
     WhiteBoardEventType[]
   >([]);
+
   const [gameStatus, setGameStatus] = useState<string>(GameStatus.IDLE);
   const [currentWordHint, setCurrentWordHint] = useState("");
   const [currentWord, setCurrentWord] = useState("");
-  const [currentTimer, setCurrentTimer] = useState<number>();
   const [scoreboard, setScoredboard] = useState<ScoreEntry[]>([
     { userId: "", username: "", score: 0 },
   ]);
+  const [forceTimerOff,setForceTimerOff]=useState<boolean>(false);
 
   const [currentUser, setCurrentUser] = useState<string>("");
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
@@ -71,6 +71,7 @@ export default function Room() {
 
   const [tool, setTool] = useState<string>(ToolType.PENCIL);
   const [color, setColor] = useState<string>("#000000");
+
   const [socket, setSocket] = useState<Socket | null | undefined>();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -80,7 +81,7 @@ export default function Room() {
 
   const navigate = useNavigate();
 
-  console.log("CANVAS", canvasRef.current, canvasctxRef.current);
+  // console.log("CANVAS", canvasRef.current, canvasctxRef.current);
 
   useEffect(() => {
     const getDataFromLocalStorage = localStorage.getItem("scribbleDraw-data");
@@ -92,8 +93,6 @@ export default function Room() {
       if (!parsedData?.user?.username) {
         throw new Error("invalid data structure in localStorage");
       }
-
-      console.log("User verified:", parsedData.user.username);
       localStorageRef.current = parsedData;
     } catch (error) {
       toast.error("Failed to fetch data from localStorage...try relogin");
@@ -172,9 +171,7 @@ export default function Room() {
       if (newSocket && newSocket.connected) {
         console.log("Cleaning up socket connection.");
         if (user && roomId) {
-          newSocket.emit("leaveRoom", { roomId: roomId }, (response: any) => {
-            console.log("leaveRoom response:", response);
-          });
+          newSocket.emit("leaveRoom", { roomId: roomId });
         }
         newSocket.disconnect();
       }
@@ -194,6 +191,7 @@ export default function Room() {
 
     socket.on("roomLeft", (payload) => {
       toast.success(payload.message);
+      navigate('/home');
     });
 
     socket.on("userJoined", (payload) => {
@@ -207,7 +205,6 @@ export default function Room() {
 
     socket.on("receiveDrawingUpdate", (payload) => {
       setWhiteBoardEvents((prev) => {
-        console.log("FUNCTION EXECUTION RECEIVE DRAWING UPDATE");
         const id = payload.id;
         const eventIndex = prev.findIndex((event) => event?.id === id);
         if (eventIndex === -1) {
@@ -254,7 +251,6 @@ export default function Room() {
     });
 
     socket.on("receiveDrawingEvent", (payload) => {
-      console.log("Drawing event from socket", payload.event);
       setWhiteBoardEvents((prev) => {
         const eventExists = prev.some(
           (event) => event?.id === payload.event.id
@@ -269,21 +265,18 @@ export default function Room() {
     })
 
     socket.on("receiveStartGameForDrawer", (payload) => {
-      console.log("Recieved receiveStartGameForDrawer event", payload);
       setGameStatus(payload.mode);
       setCurrentWord(payload.word);
       setCurrentWordHint(payload.maskedWord);
-      setCurrentTimer(TIMER_DUR);
     });
 
     socket.on("receiveStartGame", (payload) => {
-      console.log("Recieved receiveStartGame event", payload);
       handleClearCanvas();
       setGameStatus(payload.mode);
       setCurrentWordHint(payload.maskedWord);
       setEnableGuessInput(true);
       setGuessInput("");
-      setCurrentTimer(TIMER_DUR);
+      setForceTimerOff(false);
     });
 
     socket.on("wrongGuess", (payload) => {
@@ -300,6 +293,12 @@ export default function Room() {
         setScoredboard(payload.scoreBoard);
       }
     });
+
+    socket.on('receiveRoundEnd',(payload)=>{
+      if(payload?.message && !isOwner){
+        setForceTimerOff(true);
+      }
+    })
 
     socket.on("endGame", (payload) => {
       if (payload) {
@@ -327,6 +326,7 @@ export default function Room() {
       socket.off("correctGuess");
       socket.off("wrongGuess");
       socket.off("updateScoreBoard");
+      socket.off("receiveRoundEnd");
       socket.off("endGame");
       socket.off("roomError");
     };
@@ -384,7 +384,7 @@ export default function Room() {
       const response = await roomApi.fetchRoomScoreBoard({ roomId: roomId! });
       setScoredboard(response.data.data);
     } catch (error) {
-      console.log(error);
+      console.log("fetchScoreBoard error",error);
     }
   };
 
@@ -429,6 +429,7 @@ export default function Room() {
                 onClearCanvasClick={handleClearCanvas}
                 isOwner={isOwner}
                 onRoundEnd={handleRoundEnd}
+                forceTimerOff={forceTimerOff}
               />
             )}
           </div>

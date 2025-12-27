@@ -39,10 +39,8 @@ export default function RegisterForm({ isOpen, setShowModal }: FormPropTypes) {
         toast.error("Sorry,unable to register.Try Again");
       }
     } catch (error) {
-      const axiosError = error as AxiosError;
-      console.log(axiosError);
       const message = `An error occurred during register`;
-      toast.error(message);
+      toast.error(error?.response?.data?.message ||  message);
     }
   };
   return (
