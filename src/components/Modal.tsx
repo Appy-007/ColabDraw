@@ -18,7 +18,7 @@ const Modal = ({ isOpen, onClose,targetRoot='modal-root', children }: ModalPropT
       onClick={onClose} // close on backdrop click
     >
       <div
-        className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full"
+        className="bg-white p-6 sm:p-8 rounded-lg shadow-lg max-w-md w-full max-sm:mx-2"
         onClick={(e) => e.stopPropagation()} // prevent close on modal click
       >
         {children}

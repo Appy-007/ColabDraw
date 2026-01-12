@@ -2,7 +2,7 @@ import { io, Socket } from "socket.io-client";
 
 import { toast } from "react-toastify";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+const BACKEND_URL = import.meta.env.MODE === "PRODUCTION" ? import.meta.env.VITE_BACKEND_URL : "http://localhost:3000";
 
 let socket: Socket | null  = null;
 

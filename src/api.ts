@@ -3,7 +3,7 @@ import type { CheckRoomIdType, CreateRoomType, JoinRoomType, LoginDataType, Regi
 
 //base Axios instance
 const api = axios.create({
-  baseURL: import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000',
+  baseURL:import.meta.env.MODE === "PRODUCTION" ? import.meta.env.VITE_BACKEND_URL : 'http://localhost:3000',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -23,6 +23,30 @@ api.interceptors.request.use(config => {
 }, error => {
   return Promise.reject(error);
 });
+
+export const attachLoadingInterceptor = (setActiveRequests: React.Dispatch<React.SetStateAction<number>>) => {
+  api.interceptors.request.use((config) => {
+    setActiveRequests(prev => prev + 1);
+    return config;
+  }, (error) => {
+    return Promise.reject(error);
+  });
+
+  api.interceptors.response.use(
+    (response) => {
+      // Small delay so the "Sketching" animation is actually visible 
+      // even on fast connections
+      setTimeout(() => {
+        setActiveRequests(prev => Math.max(0, prev - 1));
+      }, 300);
+      return response;
+    },
+    (error) => {
+      setActiveRequests(prev => Math.max(0, prev - 1));
+      return Promise.reject(error);
+    }
+  );
+};
 
 //API functions
 export const authApi = {

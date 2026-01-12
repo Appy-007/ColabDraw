@@ -244,7 +244,7 @@ export default function Whiteboard({
           </div>
         ) : (
           <div
-            className="max-md:w-full w-8/12 my-10 border max-md:h-2/5 h-screen 
+            className="max-md:w-full w-8/12  my-2 sm:my-10 border max-md:h-60 h-screen 
                 flex items-center justify-center  
                 border-gray-800 bg-white/20 backdrop-blur-md 
                   rounded-xl shadow-lg"
@@ -252,7 +252,7 @@ export default function Whiteboard({
             {isOwner && (
               <button
                 onClick={handleStartGame}
-                className="cursor-pointer border border-gray-300 p-2 rounded-md"
+                className="cursor-pointer border border-gray-300 p-2 rounded-md max-md:text-xs"
               >
                 Start Game
               </button>
@@ -262,7 +262,7 @@ export default function Whiteboard({
       ) : (
         <canvas
           ref={canvasRef}
-          className={`max-md:w-full w-8/12 my-10 border max-md:h-2/5 h-screen  border-gray-800 bg-white`}
+          className={`max-md:w-full w-8/12 my-2 sm:my-10 border max-md:h-60 h-screen  border-gray-800 bg-white`}
           onMouseUp={isOwner ? handleMouseUp : () => {}}
           onMouseMove={isOwner ? handleMouseMove : () => {}}
           onMouseDown={isOwner ? handleMouseDown : () => {}}
