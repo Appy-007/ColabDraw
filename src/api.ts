@@ -3,7 +3,7 @@ import type { CheckRoomIdType, CreateRoomType, JoinRoomType, LoginDataType, Regi
 
 //base Axios instance
 const api = axios.create({
-  baseURL:import.meta.env.MODE === "PRODUCTION" ? import.meta.env.VITE_BACKEND_URL : 'http://localhost:3000',
+  baseURL:import.meta.env.VITE_MODE === "PRODUCTION" ? import.meta.env.VITE_BACKEND_URL : 'http://localhost:3000',
   headers: {
     'Content-Type': 'application/json',
   },
