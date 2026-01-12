@@ -45,26 +45,26 @@ export default function Register() {
       <div className="flex h-full items-center justify-center  bg-stone-100">
         <div className="flex flex-col gap-10">
           <div>
-            <h1 className="font-bold text-5xl pb-2 font-stretch-extra-expanded">
+            <h1 className="font-bold text-3xl  sm:text-5xl pb-2 font-stretch-extra-expanded">
               Join the Fun !
             </h1>
           </div>
 
           <div>
-            <p className="text-gray-400 font-bold text-2xl text-left font-stretch-extra-expanded">
+            <p className="text-gray-400 font-bold text-lg sm:text-2xl text-left font-stretch-extra-expanded">
               Ready to draw, guess & win ?
             </p>
           </div>
 
           <div className="flex gap-6">
             <button
-              className="px-4 py-2 rounded-md bg-sky-400 text-white cursor-pointer"
+              className="max-sm:text-sm px-4 py-2 rounded-md bg-sky-400 text-white cursor-pointer"
               onClick={() => handleModal(MODAL_TYPE.register)}
             >
               Register
             </button>
             <button
-              className="px-4 py-2 rounded-md border border-sky-400 bg-white text-sky-400 cursor-pointer"
+              className="max-sm:text-sm px-4 py-2 rounded-md border border-sky-400 bg-white text-sky-400 cursor-pointer"
               onClick={() => handleModal(MODAL_TYPE.login)}
             >
               Login

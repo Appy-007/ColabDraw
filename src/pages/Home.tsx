@@ -39,7 +39,7 @@ export default function Home() {
       <div className="flex px-8 h-8/12 items-center  bg-stone-100">
         <div className="flex flex-col items-start gap-8">
           <div>
-            <h1 className="font-bold text-4xl pb-2">
+            <h1 className="font-bold text-3xl sm:text-5xl py-2">
               Welcome to Scribble Draw
             </h1>
           </div>
@@ -52,13 +52,13 @@ export default function Home() {
 
           <div className="flex justify-center gap-6">
             <button
-              className="px-4 py-2 rounded-md bg-sky-400 text-white cursor-pointer"
+              className="max-sm:text-sm px-4 py-2 rounded-md bg-sky-400 text-white cursor-pointer"
               onClick={() => handleModal(MODAL_TYPE.createRoom)}
             >
               Create new Whiteboard
             </button>
             <button
-              className="px-4 py-2 rounded-md border border-sky-400 bg-white text-sky-400 cursor-pointer"
+              className="max-sm:text-sm px-4 py-2 rounded-md border border-sky-400 bg-white text-sky-400 cursor-pointer"
               onClick={() => handleModal(MODAL_TYPE.joinRoom)}
             >
               Join Whiteboard
@@ -72,9 +72,9 @@ export default function Home() {
         <div className="grid grid-cols-2 justify-center mt-4  gap-4">
           {DESCRIPTIONS_ARR.length > 0 &&
             DESCRIPTIONS_ARR.map((item,index) => (
-              <div key={index} className="border-2 p-4  rounded border-sky-400  w-80">
-                <p className="text-lg font-semibold">{item.title}</p>
-                <p className="text-sm text-gray-600">{item.description}</p>
+              <div key={index} className="border-2 p-4  rounded border-sky-400 max-w-80">
+                <p className="text-md sm:text-lg font-semibold">{item.title}</p>
+                <p className="text-xs sm:text-sm text-gray-600">{item.description}</p>
               </div>
             ))}
         </div>

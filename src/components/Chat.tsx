@@ -27,14 +27,14 @@ export default function Chat(props: ChatProps) {
   return (
     <>
       <div className="bg-white flex flex-col flex-grow rounded-xl shadow-lg border border-gray-200 max-md:h-40 h-96 lg:h-auto">
-        <div className="p-2 border-b text-lg font-bold text-gray-700">
+        <div className="p-2 border-b  text-md sm:text-lg font-bold text-gray-700">
           Chats
         </div>
 
         {/* Messages Display */}
         <div
           ref={chatBoxRef}
-          className="flex-grow p-4 space-y-2 overflow-y-auto custom-scrollbar"
+          className="flex-grow p-4 space-y-2 overflow-y-auto custom-scrollbar max-sm:text-xs"
         >
           {chatMessages.map((msg, index) => (
             <div key={index} className="text-sm">
@@ -62,7 +62,7 @@ export default function Chat(props: ChatProps) {
               )}
             </div>
           ))}
-          <p>Chat section is disabled currently..</p>
+          <p className="">Chat section is disabled currently..</p>
         </div>
 
         {/* Guess Input */}

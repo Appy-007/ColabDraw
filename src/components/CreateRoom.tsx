@@ -129,7 +129,7 @@ export default function CreateRoom({ isOpen, setShowModal }: FormPropTypes) {
               }
             />
 
-            <div className="flex justify-between items-center gap-4">
+            <div className="flex max-sm:flex-col justify-between max-sm:items-start items-center gap-4">
               <input
                 className=" outline-none border border-gray-400 px-2 py-1 rounded-md"
                 type="text"

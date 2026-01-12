@@ -417,7 +417,7 @@ export default function Room() {
   return (
     <>
       <div className="bg-stone-100">
-        <div className="px-20 py-5">
+        <div className="px-4 sm:px-20 py-5">
           {isOwner && (
             <WhiteBoardToolBar
               tool={tool}
@@ -454,7 +454,7 @@ export default function Room() {
             />
           )}
           <div className="flex max-md:flex-col-reverse flex-wrap max-md:items-center items-start gap-4 flex-1 ">
-            <div className="flex max-md:flex-row flex-col my-10 gap-6 max-md:w-full w-3/12">
+            <div className="flex max-md:flex-row flex-col my-2 sm:my-10 gap-2 sm:gap-6 max-md:w-full w-3/12">
               <Scoreboard
                 scoreBoard={scoreboard}
                 currentUserEmail={currentUserEmail}
