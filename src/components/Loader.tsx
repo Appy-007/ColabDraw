@@ -16,25 +16,6 @@ export default function Loader({ isLoading }: { isLoading: boolean }) {
         </p>
       </div>
 
-      <style jsx>{`
-        @keyframes sketch {
-          0% {
-            width: 0%;
-            transform: translateX(0%);
-          }
-          50% {
-            width: 100%;
-            transform: translateX(0%);
-          }
-          100% {
-            width: 0%;
-            transform: translateX(100%);
-          }
-        }
-        .animate-sketch-line {
-          animation: sketch 1.5s infinite ease-in-out;
-        }
-      `}</style>
     </div>
   );
 }
