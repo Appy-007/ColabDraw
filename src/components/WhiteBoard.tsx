@@ -65,8 +65,18 @@ export default function Whiteboard({
   }, [canvasRef, canvasctxRef, gameStatus]);
 
   const sendBoardEventToSocket = (boardEvent: WhiteBoardEventType) => {
-    if (socket && socket.connected) {
-      socket.emit("sendDrawingEvent", { roomId, event: boardEvent });
+    if (socket && socket.connected && canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      // Normalize initial coordinates
+      const normalizedEvent = {
+        ...boardEvent,
+        offsetX: boardEvent.offsetX / rect.width,
+        offsetY: boardEvent.offsetY / rect.height,
+        currentX: boardEvent.currentX ? boardEvent.currentX / rect.width : undefined,
+        currentY: boardEvent.currentY ? boardEvent.currentY / rect.height : undefined,
+        path: boardEvent.path?.map(([x, y]) => [x / rect.width, y / rect.height]),
+      };
+      socket.emit("sendDrawingEvent", { roomId, event: normalizedEvent });
     }
   };
 
@@ -74,6 +84,7 @@ export default function Whiteboard({
     const canvasElement = canvasRef.current;
     if (canvasElement) {
       const canvas = rough.canvas(canvasElement);
+      const rect = canvasElement.getBoundingClientRect();
       // console.log("UseLayout called");
 
       if (whiteBoardEvents?.length > 0) {
@@ -91,21 +102,26 @@ export default function Whiteboard({
             stroke: boardEvent?.stroke,
             roughness: 0,
           };
+
+          const denormalizeX = (val: number) => val <= 1.1 ? val * rect.width : val;
+          const denormalizeY = (val: number) => val <= 1.1 ? val * rect.height : val;
           if (boardEvent.type === ToolType.PENCIL) {
-            canvas.linearPath(boardEvent?.path as Point[], strokeOptions);
+            const denormalizedPath =boardEvent?.path &&  boardEvent?.path?.length >0 &&  boardEvent.path.map(([x, y]: any) => [denormalizeX(x), denormalizeY(y)]);
+            canvas.linearPath(denormalizedPath as Point[], strokeOptions);
+            // canvas.linearPath(boardEvent?.path as Point[], strokeOptions);
           } else if (boardEvent.type === ToolType.LINE) {
             canvas.line(
-              boardEvent?.offsetX,
-              boardEvent?.offsetY,
-              boardEvent.currentX!,
-              boardEvent.currentY!,
+              denormalizeX(boardEvent.offsetX),
+              denormalizeY(boardEvent.offsetY),
+              denormalizeX(boardEvent.currentX !),
+              denormalizeY(boardEvent.currentY !),
               strokeOptions
             );
           } else {
-            const startX = boardEvent?.offsetX;
-            const startY = boardEvent?.offsetY;
-            const endX = boardEvent.currentX!;
-            const endY = boardEvent.currentY!;
+            const startX = denormalizeX(boardEvent.offsetX);
+            const startY = denormalizeY(boardEvent.offsetY);
+            const endX = denormalizeX(boardEvent.currentX !);
+            const endY = denormalizeY(boardEvent.currentY !);
 
             // FIX: Normalize coordinates to get consistent top-left corner and positive width/height
             const x = Math.min(startX, endX);
@@ -167,14 +183,16 @@ export default function Whiteboard({
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!enableDrawing || !isOwner) return;
+    if (!enableDrawing || !isOwner || !canvasRef.current) return;
+
     const { offsetX, offsetY } = e.nativeEvent;
+    const rect =  canvasRef.current.getBoundingClientRect();
 
     setWhiteBoardEvents((prevWhiteBoardEvents: WhiteBoardEventType[]) => {
       const id = currentEventIdRef.current;
       if (!id) return prevWhiteBoardEvents;
       const idx = prevWhiteBoardEvents.findIndex((event) => event.id === id);
-
+      
       if (idx === -1) return prevWhiteBoardEvents;
 
       const ev = prevWhiteBoardEvents[idx];
@@ -186,7 +204,7 @@ export default function Whiteboard({
             roomId,
             id,
             type: "pencil_event",
-            point: [offsetX, offsetY],
+            point: [offsetX/rect.width, offsetY/rect.height],
           });
         }
         return prevWhiteBoardEvents.map((be, i) =>
@@ -199,8 +217,8 @@ export default function Whiteboard({
             roomId,
             id,
             type: "shape_event",
-            currentX: offsetX,
-            currentY: offsetY,
+            currentX: offsetX / rect.width,
+            currentY: offsetY / rect.height,
             shapeType: ev.type,
           });
         }
@@ -222,20 +240,20 @@ export default function Whiteboard({
       {gameStatus != GameStatus.PLAYING ? (
         gameStatus === GameStatus.FINISHED ? (
           <div
-            className="max-md:w-full w-8/12 my-10 border max-md:h-2/5 h-screen 
+            className="max-md:w-full w-8/12 my-2 sm:my-10 border max-md:h-2/5 h-screen 
                 flex items-center justify-center  
                 border-gray-800 bg-white/20 backdrop-blur-md 
-                  rounded-xl shadow-lg"
+                  rounded-xl shadow-lg p-2"
           >
             <div className="flex-col gap-10 text-center">
               <p className="text-2xl font-bold text-green-500">
                 Game ended !!{" "}
               </p>
-              <p className="text-sm">
+              <p className="text-xs sm:text-sm">
                 Browse back to the home page to start a new game
               </p>
               <button
-                className="rounded-lg cursor-pointer bg-blue-600 p-2 mt-5 text-white"
+                className="rounded-lg cursor-pointer bg-blue-600 px-2 py-1 sm:p-2 mt-5 text-white text-xs sm:text-md"
                 onClick={() => navigate("/home")}
               >
                 Go to Home
@@ -262,10 +280,12 @@ export default function Whiteboard({
       ) : (
         <canvas
           ref={canvasRef}
-          className={`max-md:w-full w-8/12 my-2 sm:my-10 border max-md:h-60 h-screen  border-gray-800 bg-white`}
-          onMouseUp={isOwner ? handleMouseUp : () => {}}
-          onMouseMove={isOwner ? handleMouseMove : () => {}}
-          onMouseDown={isOwner ? handleMouseDown : () => {}}
+          className={`max-md:w-full w-8/12 my-2 sm:my-10 border max-md:h-60 h-screen  border-gray-800 bg-white touch-none`}
+          onPointerUp={isOwner ? handleMouseUp : () => {}}
+          onPointerMove={isOwner ? handleMouseMove : () => {}}
+          onPointerDown={isOwner ? handleMouseDown : () => {}}
+          onPointerCancel={isOwner ? handleMouseUp : () => {}}
+          onPointerLeave={isOwner ? handleMouseUp : () => {}}
         ></canvas>
       )}
     </>

@@ -12,7 +12,7 @@ export default function MainLayout() {
           <Outlet />
         </div>
 
-        <ToastContainer position="top-center" autoClose={2000} />
+        <ToastContainer className={"max-sm: text-sm max-sm:py-0.5"} position="top-center" autoClose={2000} />
       </div>
     </>
   );
