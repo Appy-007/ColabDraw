@@ -12,7 +12,7 @@ export type TimerProps = {
 export default function Timer(props: TimerProps) {
   const { isOwner, gameStatus, setGameStatus,forceTimerOff, onClearCanvasClick, onRoundEnd } =
     props;
-  const [roundTimer, setRoundTimer] = useState(40);
+  const [roundTimer, setRoundTimer] = useState(60);
 
   const timerIdRef = useRef<number>(null);
   useEffect(() => {

@@ -18,7 +18,7 @@ export default function Guess(props: GuessProps) {
     currentWord,
     currentWordHint,
     checkGuessedInput,
-    enableGuessInput
+    enableGuessInput,
   } = props;
   return (
     <>
@@ -53,7 +53,7 @@ export default function Guess(props: GuessProps) {
                 id="guessInput"
                 type="text"
                 placeholder="Type your word here..."
-                className="flex-grow px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-md transition duration-150 ease-in-out
+                className="flex-grow px-2 sm:px-4 py-1 sm:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-xs sm:text-md transition duration-150 ease-in-out
           "
                 disabled={!enableGuessInput}
                 autoComplete="off"
@@ -63,7 +63,7 @@ export default function Guess(props: GuessProps) {
               <button
                 disabled={!enableGuessInput}
                 onClick={checkGuessedInput}
-                className="px-6 py-2 bg-indigo-500 text-white font-bold rounded-lg  shadow-md hover:bg-indigo-600  focus:outline-none focus:ring-4 focus:ring-indigo-300  active:bg-indigo-700 transition duration-150 ease-in-out cursor-pointer
+                className="px-2 sm:px-6 py-1 sm:py-2 bg-indigo-500 text-xs sm:text-md text-white font-bold rounded-lg  shadow-md hover:bg-indigo-600  focus:outline-none focus:ring-4 focus:ring-indigo-300  active:bg-indigo-700 transition duration-150 ease-in-out cursor-pointer
           "
               >
                 Check
