@@ -69,8 +69,7 @@ export default function CreateRoom({ isOpen, setShowModal }: FormPropTypes) {
     event.preventDefault();
   const shareData = {
     title: "Join my Whiteboard",
-    text: `Join room: ${createRoom?.roomId}`,
-    url:import.meta.env.VITE_MODE === "PRODUCTION" ? `${import.meta.env.VITE_BACKEND_URL}/room/${createRoom.roomId}` : `http://localhost:3000/room/${createRoom?.roomId}`,
+    text: `${createRoom?.roomId}`,
   };
 
   if (navigator.share && isMobile()) {
