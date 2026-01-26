@@ -254,7 +254,7 @@ export default function Whiteboard({
               </p>
               <button
                 className="rounded-lg cursor-pointer bg-blue-600 px-2 py-1 sm:p-2 mt-5 text-white text-xs sm:text-md"
-                onClick={() => navigate("/home")}
+                onClick={() => navigate("/home",{replace:true})}
               >
                 Go to Home
               </button>
