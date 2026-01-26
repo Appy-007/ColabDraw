@@ -24,6 +24,8 @@ export default function CreateRoom({ isOpen, setShowModal }: FormPropTypes) {
     rounds: "",
   });
 
+  const isMobile = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && window.innerWidth <= 768;
+
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement>,
     name: string
@@ -50,18 +52,39 @@ export default function CreateRoom({ isOpen, setShowModal }: FormPropTypes) {
     });
   };
 
-  const copyToClipBoard = async (
-    event: React.MouseEvent<HTMLButtonElement, MouseEvent>
-  ) => {
+  // const copyToClipBoard = async (
+  //   event: React.MouseEvent<HTMLButtonElement, MouseEvent>
+  // ) => {
+  //   event.preventDefault();
+  //   try {
+  //     await navigator.clipboard.writeText(createRoom.roomId);
+  //     toast.success("Room Id copied to your clipboard");
+  //   } catch (err) {
+  //     console.log(err);
+  //     toast.error("Failed to copy room Id");
+  //   }
+  // };
+
+  const handleShare = async (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     event.preventDefault();
-    try {
-      await navigator.clipboard.writeText(createRoom.roomId);
-      toast.success("Room Id copied to your clipboard");
-    } catch (err) {
-      console.log(err);
-      toast.error("Failed to copy room Id");
-    }
+  const shareData = {
+    title: "Join my Whiteboard",
+    text: `Join room: ${createRoom?.roomId}`,
+    url:import.meta.env.VITE_MODE === "PRODUCTION" ? `${import.meta.env.VITE_BACKEND_URL}/room/${createRoom.roomId}` : `http://localhost:3000/room/${createRoom?.roomId}`,
   };
+
+  if (navigator.share && isMobile()) {
+    try {
+      await navigator.share(shareData);
+    } catch (err) {
+      console.log("Error sharing", err);
+    }
+  } else {
+    // Fallback to copy to clipboard
+    navigator.clipboard.writeText(createRoom?.roomId);
+    toast.success("ID copied!");
+  }
+};
 
   const handleSubmit = async (event: React.ChangeEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -150,7 +173,7 @@ export default function CreateRoom({ isOpen, setShowModal }: FormPropTypes) {
                 <button
                   type="button"
                   className="cursor-pointer font-bold py-2 px-4 border border-sky-400 text-sky-400 rounded"
-                  onClick={(event) => copyToClipBoard(event)}
+                  onClick={(event) => handleShare(event)}
                 >
                   Copy
                 </button>
